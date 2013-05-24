@@ -12,9 +12,9 @@ import java.util.*;
 public class TFTPSim {
 	
 	public static enum Mode { OFF, ON};
+	
 	public static final int TIP = 2;
 	public static final int PACKET = 1;
-	
 	public static final int DATA = 1;
 	public static final int ACK = 2;
 	public static final int REQ = 3;
@@ -71,13 +71,18 @@ public class TFTPSim {
 		int input;
 		
 		System.out.println("Which type of error do you wish to generate? (select by number):");
+		System.out.println("0) No Error");
 		System.out.println("4) Packet Error");
 		System.out.println("5) TID Error");
 		System.out.println("Choose: ");
 		
 		for(;;) {
 			input = scanner.nextInt();
-			
+			if(input==0) {
+				this.error = new Error();
+				scanner.close();
+				return;
+			}
 			if(input==4) {
 				packetError(scanner);
 				break;
@@ -183,7 +188,7 @@ public class TFTPSim {
 		System.out.println("Please select a block number to trigger the error: ");
 		for(;;) {
 			this.blockNumber = scanner.nextInt();
-			if (this.blockNumber>0) break;
+			if (this.blockNumber>0 || (this.blockNumber==0 && this.packetType == (byte) 1)) break;
 			System.out.println("Invalid block number selection.  Please try again:");
 		} 
 		error = new Error(TIP, this.packetType, new BlockNumber(this.blockNumber));
@@ -215,6 +220,7 @@ public class TFTPSim {
 		for(;;){
 			Thread connect = new Thread ( new TFTPSimManager(s.FormPacket(),s.error));
 			if(s.mode==Mode.ON) s.setupErrorMode();
+			else s.error = new Error();
 	        connect.start();
 		}
 	}

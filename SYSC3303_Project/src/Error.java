@@ -16,6 +16,10 @@ public class Error {
 		this(et, bt, bn, 0);
 	}
 	
+	public Error() {
+		this(0,(byte)0,new BlockNumber());
+	}
+	
 	public int getErrorType() {
 		return this.errorType;
 	}
