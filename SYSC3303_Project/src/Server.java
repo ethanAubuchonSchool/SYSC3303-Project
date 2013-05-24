@@ -7,6 +7,10 @@ import java.net.*;
 public class Server {
 	public static final int WELL_KNOWN_PORT = 69;
 	public static final int BUFFER_SIZE = 512+4;
+		private boolean acceptIncoming;
+	
+	
+
 	//public static final byte DEFAULT = 0;//Default Server will be type 0
 
 	
@@ -17,12 +21,15 @@ public class Server {
 	public Server() {
 		try {
 			wellKnown = new DatagramSocket(WELL_KNOWN_PORT);
+			this.acceptIncoming = true;
+		
+			(new Thread(new ServerEx(this))).start(); 	
 		} catch (SocketException e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
 	}
-	
+
 	
 	public DatagramPacket recieveTFTP() {
 		byte data[] = new byte[BUFFER_SIZE];
@@ -43,5 +50,14 @@ public class Server {
 			Thread st = new Thread(new ServerThread(s.recieveTFTP()));
 			st.start();
 		}
+	}
+	protected void stopReceiving() {
+            this.acceptIncoming = false;
+	}
+	/**
+	 * @return the isActive
+	 */
+	protected boolean isActive() {
+            return acceptIncoming;
 	}
 } 
