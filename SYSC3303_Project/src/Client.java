@@ -55,9 +55,9 @@ public class Client  {
 		Scanner scanner = new Scanner (System.in);
 		int request = scanner.nextInt();
 		System.out.println(" Type File name: ");
-		file = scanner.nextLine();
+		file = scanner.next();
 		System.out.println(" Type mode: ");
-		mode = scanner.nextLine();
+		mode = scanner.next();
 		msg[0] = 0;
 		scanner.close();
 		
@@ -135,7 +135,7 @@ public class Client  {
 							this.sendPort = temp.getPort();
 						
 						
-						if (sendPort != temp.getPort() || InetAddress.getLocalHost() != temp.getAddress()){  // checking for error 5
+						if (sendPort != temp.getPort()){  // checking for error 5
 							byte[] error5 = new byte[BUFFER_SIZE];
 							error5[0] = 0;
 							error5[1] = ERROR;
@@ -166,7 +166,7 @@ public class Client  {
 						
 							while(temp.getData()[1] == ERROR){
 								if(temp.getData()[3] == 4){
-									run();
+									System.exit(1);
 								}else{
 									sendReceiveSocket.send(block);
 									System.out.println("sending the corrupted  block");
@@ -201,7 +201,7 @@ public class Client  {
 								DatagramPacket errorPacket = new DatagramPacket(error4, error4.length,temp.getAddress(), temp.getPort());
 								sendReceiveSocket.send(errorPacket);
 								System.out.println("the error 4 has been sent and request is starting again");
-								run();
+								System.exit(1);
 							}
 						
 						
@@ -310,7 +310,7 @@ public class Client  {
 				if(this.sendPort==0) 
 					sendPort = temp.getPort();
 				
-				if (sendPort != temp.getPort() || InetAddress.getLocalHost() != temp.getAddress()){  // checking for error 5
+				if (sendPort != temp.getPort()){  // checking for error 5
 					byte[] error5 = new byte[BUFFER_SIZE];
 					error5[0] = 0;
 					error5[1] = ERROR;
@@ -337,7 +337,7 @@ public class Client  {
 				
 				while(temp.getData()[1] == ERROR){
 					if(temp.getData()[3] == 4){
-						run();
+						System.exit(1);
 					}else{
 						sendReceiveSocket.send(readpack);
 						System.out.println("sending the corrupted  block");
@@ -374,7 +374,7 @@ public class Client  {
 					DatagramPacket errorPacket = new DatagramPacket(error4, error4.length,temp.getAddress(), temp.getPort());
 					sendReceiveSocket.send(errorPacket);
 					System.out.println("the error 4 has been sent and request is starting again");
-					run();
+					System.exit(1);
 				}
 				/**for(int i = 0; i < 4; i ++) {
 					System.out.println("Byte "+i+": "+temp.getData()[i]);
