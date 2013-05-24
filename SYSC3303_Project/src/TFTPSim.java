@@ -11,28 +11,31 @@ import java.util.*;
 
 public class TFTPSim {
 	
-	public static enum Mode { OFF, ON};
+	public static int ON = 1;
+	public static int OFF = 2;
 	
 	public static final int TIP = 2;
 	public static final int PACKET = 1;
 	public static final int DATA = 1;
 	public static final int ACK = 2;
 	public static final int REQ = 3;
+	
+	public static final int PORT = 68;
 
 	// UDP datagram packets and sockets used to send / receive
 	private DatagramSocket socket;
-	private Mode mode;
+	public int mode;
 	private byte packetType;
 	private int blockNumber;
 	private int errorDetail;
-	private Error error;
+	protected Error error;
 	
 	public TFTPSim()
 	{
 	   try {
 	      // Construct a datagram socket and bind it to port 68 on the local host machine.
 	      // This socket will be used to receive UDP Datagram packets from clients.
-	      socket = new DatagramSocket(68);
+	      socket = new DatagramSocket(PORT);
 	   } catch (SocketException se) {
 	      se.printStackTrace();
 	      System.exit(1);
@@ -50,7 +53,7 @@ public class TFTPSim {
 		byte data[] = new byte[516];
 		DatagramPacket packet = new DatagramPacket(data, data.length);
 		try {
-			System.out.println("Waiting for packet from client on port "+socket.getPort());
+			System.out.println("Waiting for packet from client on port "+PORT);
 			socket.receive(packet);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -205,22 +208,28 @@ public class TFTPSim {
 		for(;;) {
 			System.out.println("Do you wish to use the simulator? (y/n):");
 			input = scanner.next();
-			
-			if(input.equals('y')||input.equals('Y')) {
-				s.mode = Mode.ON;
+
+			if(input.equals("y")||input.equals("Y")) {
+				s.mode = ON;
+				System.out.println("Error mode on");
 				break;
-			} else if(input.equals('n')||input.equals('N')) {
-				s.mode = Mode.OFF;
+			} else if(input.equals("n")||input.equals("N")) {
+				s.mode = OFF;
 				break;
 			}
 			System.out.println("Invalid option.  Please try again:");
 		}
 		scanner.close();
-		
 		for(;;){
-			Thread connect = new Thread ( new TFTPSimManager(s.FormPacket(),s.error));
-			if(s.mode==Mode.ON) s.setupErrorMode();
-			else s.error = new Error();
+			DatagramPacket packet = s.FormPacket();
+			if(s.mode==ON) {
+				System.out.println("Error mode setup:");
+				s.setupErrorMode();
+			} else s.error = new Error();
+			TFTPSimManager thread = new TFTPSimManager(packet,s.error);
+			Thread connect = new Thread (thread);
+			
+			
 	        connect.start();
 		}
 	}

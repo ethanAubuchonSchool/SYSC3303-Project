@@ -44,9 +44,13 @@ public class TFTPSimManager  implements Runnable
 	
 	public void run() {
 		try {
+			byte temp[];
 			//  Construct  sendPacket to be sent to the server (to port 69)
 			clientPort = clientPacket.getPort();
-			findError(serverPacket = new DatagramPacket(clientPacket.getData(),clientPacket.getLength(),InetAddress.getLocalHost(),serverPort));
+			temp = findError(serverPacket = new DatagramPacket(clientPacket.getData(),clientPacket.getLength(),InetAddress.getLocalHost(),serverPort));
+			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
+			System.out.println();
+			serverPacket = new DatagramPacket(temp,temp.length,InetAddress.getLocalHost(),serverPort);
 			System.out.println("Recieved Packet from client");
 			serverSocket = new DatagramSocket();
 			serverSocket.send(serverPacket);
@@ -58,7 +62,10 @@ public class TFTPSimManager  implements Runnable
 			serverSocket.receive(serverPacket);
 			serverPort = serverPacket.getPort();
 			System.out.println("Recieved packet from server");
-			findError(clientPacket = new DatagramPacket (serverPacket.getData(),serverPacket.getLength(),InetAddress.getLocalHost(),clientPort));
+			temp = findError(clientPacket = new DatagramPacket (serverPacket.getData(),serverPacket.getLength(),InetAddress.getLocalHost(),clientPort));
+			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
+			System.out.println();
+			clientPacket = new DatagramPacket (temp,temp.length,InetAddress.getLocalHost(),clientPort);
 			clientSocket = new DatagramSocket();
 			clientSocket.send(clientPacket);
 			System.out.println("Forwarded packet to client");
@@ -99,7 +106,10 @@ public class TFTPSimManager  implements Runnable
 			clientPacket = new DatagramPacket(data,BUFFER_SIZE,InetAddress.getLocalHost(),clientPort);
 			clientSocket.receive(clientPacket);
 			System.out.println("Recieved packet from client");
-			findError(serverPacket = new DatagramPacket (clientPacket.getData(),clientPacket.getLength(),InetAddress.getLocalHost(),serverPort));
+			byte temp[] = findError(serverPacket = new DatagramPacket(clientPacket.getData(),clientPacket.getLength(),InetAddress.getLocalHost(),serverPort));
+			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
+			System.out.println();
+			serverPacket = new DatagramPacket(temp,temp.length,InetAddress.getLocalHost(),serverPort);
 			serverSocket.send(serverPacket);
 			System.out.println("Forwarded packet to server");
 			return checkForEnd(clientPacket.getData());
@@ -119,7 +129,10 @@ public class TFTPSimManager  implements Runnable
 			serverPacket = new DatagramPacket(data,BUFFER_SIZE,InetAddress.getLocalHost(),serverPort);
 			serverSocket.receive(serverPacket);
 			System.out.println("Recieved packet from server");
-			findError(clientPacket = new DatagramPacket (serverPacket.getData(),serverPacket.getLength(),InetAddress.getLocalHost(),clientPort));
+			byte temp[] = findError(clientPacket = new DatagramPacket (serverPacket.getData(),serverPacket.getLength(),InetAddress.getLocalHost(),clientPort));
+			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
+			System.out.println();
+			clientPacket = new DatagramPacket (temp,temp.length,InetAddress.getLocalHost(),clientPort);
 			clientSocket.send(clientPacket);
 			System.out.println("Forwarded packet to client");
 			return checkForEnd(serverPacket.getData());

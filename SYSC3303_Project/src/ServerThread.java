@@ -10,7 +10,7 @@ public class ServerThread implements Runnable{
 	public static final byte MAX_BLOCK_NUM = 127;
 	public static final byte DATA = 3;
 	public static final byte ACK = 4;
-	 private String[] PACKETTYPES = {"RRQ", "WRQ", "DATA", "ACK", "ERROR"}; // used for nice error string printing
+	private String[] PACKETTYPES = {"RRQ", "WRQ", "DATA", "ACK", "ERROR"}; // used for nice error string printing
 	private DatagramPacket request;
 	private DatagramSocket socket;
 	private InetAddress ip;
@@ -40,8 +40,6 @@ public class ServerThread implements Runnable{
 	 */
 	public void processRequest() {
 		System.out.println("New client request:");
-		
-		
 		
 		parseRequest();
 		
@@ -105,11 +103,11 @@ public class ServerThread implements Runnable{
 		this.port = this.request.getPort(); //stores port number in instance variable
 		File here;
 				try {
-				socket=new DatagramSocket();
- } catch (SocketException se) {   // Can't create the socket.
-		         se.printStackTrace();
-		         System.exit(1);
-		      }
+					socket=new DatagramSocket();
+				} catch (SocketException se) {   // Can't create the socket.
+					se.printStackTrace();
+					System.exit(1);
+				}
 
 
 		

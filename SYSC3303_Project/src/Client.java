@@ -49,7 +49,6 @@ public class Client  {
 
 	public void run(){
 		msg = new byte[BUFFER_SIZE];
-		int iterator = 2;
 		System.out.println("1) Read");
 		System.out.println("2) Write");
 		System.out.println("Select a mode:");
@@ -64,6 +63,7 @@ public class Client  {
 		
 		
 			this.sendPort = 0;
+			int iterator = 2;
 			if (request == 2){
 				msg[1] = 2;
 				System.arraycopy(file.getBytes(),0,msg,iterator,file.getBytes().length);
@@ -87,12 +87,18 @@ public class Client  {
 				msg[iterator] = 0;	
 				sendData(iterator+1);
 				clientRead();		
+			}else{
+				System.out.println("Request error");
 			}
 	}
 	
 	public void sendData(int size){
 		 try {
 			 System.out.println("Sending packet to port: "+this.wellKnownPort);
+			 for (int i = 0; i < size; i++) {
+				 System.out.print(msg[i]);
+			 }
+			 System.out.println();
 			 sendPacket = new DatagramPacket(this.msg, size,InetAddress.getLocalHost(), this.wellKnownPort);
 			 sendReceiveSocket.send(sendPacket);
 	        } catch (IOException e) {
@@ -129,7 +135,7 @@ public class Client  {
 							this.sendPort = temp.getPort();
 						
 						
-						while (sendPort != temp.getPort() || InetAddress.getLocalHost() != temp.getAddress()){  // checking for error 5
+						if (sendPort != temp.getPort() || InetAddress.getLocalHost() != temp.getAddress()){  // checking for error 5
 							byte[] error5 = new byte[BUFFER_SIZE];
 							error5[0] = 0;
 							error5[1] = ERROR;
@@ -298,14 +304,13 @@ public class Client  {
 			DatagramPacket temp = new DatagramPacket (msg, msg.length);
 
 			try {
-				System.out.println("Waiting for packet on ip: "+sendReceiveSocket.getInetAddress());
 				System.out.println("Waiting for packet on port: "+sendReceiveSocket.getLocalPort());
 				sendReceiveSocket.receive(temp);
 				System.out.println("Block recieved");
 				if(this.sendPort==0) 
 					sendPort = temp.getPort();
 				
-				while (sendPort != temp.getPort() || InetAddress.getLocalHost() != temp.getAddress()){  // checking for error 5
+				if (sendPort != temp.getPort() || InetAddress.getLocalHost() != temp.getAddress()){  // checking for error 5
 					byte[] error5 = new byte[BUFFER_SIZE];
 					error5[0] = 0;
 					error5[1] = ERROR;
