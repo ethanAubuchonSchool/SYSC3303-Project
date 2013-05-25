@@ -54,9 +54,9 @@ public class Client  {
 		System.out.println("Select a mode:");
 		Scanner scanner = new Scanner (System.in);
 		int request = scanner.nextInt();
-		System.out.println(" Type File name: ");
+		System.out.println("Type File name: ");
 		file = scanner.next();
-		System.out.println(" Type mode: ");
+		System.out.println("Type mode: ");
 		mode = scanner.next();
 		msg[0] = 0;
 		scanner.close();
@@ -215,13 +215,23 @@ public class Client  {
 				bnum.increment();
 				
 				n = in.read(data);
-				pack = new byte[BUFFER_SIZE];//new empty buffer created
-				//first four bits are set to TFTP Requirements
-				pack[0] = 0;
-				pack[1] = DATA;
-				System.arraycopy(bnum.getCurrent(), 0, pack, 2, 2);
-				//Data read from file
-				System.arraycopy(data,0,pack,4,n);
+				//System.out.println("n = "+n);
+				if(n < 0) {
+					pack = new byte[5];
+					pack[0] = 0;
+					pack[1] = DATA;
+					System.arraycopy(bnum.getCurrent(), 0, pack, 2, 2);
+					pack[4] = 0;
+				} else {
+					pack = new byte[BUFFER_SIZE];//new empty buffer created
+					//first four bits are set to TFTP Requirements
+					pack[0] = 0;
+					pack[1] = DATA;
+					System.arraycopy(bnum.getCurrent(), 0, pack, 2, 2);
+					//Data read from file
+					System.arraycopy(data,0,pack,4,n);
+				}
+				
 				System.out.println("Sending data to port: " + this.sendPort);
 			    block = new DatagramPacket(pack,pack.length,InetAddress.getLocalHost(), this.sendPort);
 				sendReceiveSocket.send(block);
@@ -256,13 +266,16 @@ public class Client  {
 				int length;
 				byte[] temp = getBlock(bnum.getCurrent());
 				for(length = 4; length < temp.length; length++) {
+					//System.out.print(temp[length]+","); // Used to check incoming byte array for debugging
 					if (temp[length] == 0) break;
 				}
-				out.write(temp,0,temp.length);
+				out.write(temp,0,length);
 				System.out.println("Sending ack");
 				sendAck(bnum.getCurrent());					
 				
-				if(length+1<=BUFFER_SIZE) {
+				System.out.println("length is: "+length);
+				
+				if(length<MESSAGE_SIZE) {
 					out.close();
 					break;
 				}

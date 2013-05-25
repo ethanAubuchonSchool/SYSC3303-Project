@@ -69,10 +69,10 @@ public class TFTPSim {
 	/**
 	 * A menu that asks the user to pick either a Packet error or a TID error
 	 */
-	public void setupErrorMode() {
-		Scanner scanner = new Scanner (System.in);
-		int input;
+	public void setupErrorMode(Scanner scanner) {
 		
+		int input;
+		//Scanner scanner = new Scanner( System.in );
 		System.out.println("Which type of error do you wish to generate? (select by number):");
 		System.out.println("0) No Error");
 		System.out.println("4) Packet Error");
@@ -80,22 +80,27 @@ public class TFTPSim {
 		System.out.println("Choose: ");
 		
 		for(;;) {
-			input = scanner.nextInt();
+				//while(!scanner.hasNextInt());
+				String temp = scanner.next();
+				input = Integer.parseInt(temp);
 			if(input==0) {
-				this.error = new Error();
+				//this.error = new Error();
 				scanner.close();
 				return;
 			}
 			if(input==4) {
+				//System.out.println("Packet Error!");
 				packetError(scanner);
 				break;
 			} else if(input==5) {
+				//System.out.println("Packet Error!");
 				tipError(scanner);
 				break;
 			}
 			System.out.println("Invalid option.  Please try again:");
+			
 		}
-		scanner.close();
+		//scanner.close();
 	}
 	
 	
@@ -219,12 +224,13 @@ public class TFTPSim {
 			}
 			System.out.println("Invalid option.  Please try again:");
 		}
-		scanner.close();
+		
 		for(;;){
 			DatagramPacket packet = s.FormPacket();
 			if(s.mode==ON) {
 				System.out.println("Error mode setup:");
-				s.setupErrorMode();
+				s.setupErrorMode(scanner);
+				
 			} else s.error = new Error();
 			TFTPSimManager thread = new TFTPSimManager(packet,s.error);
 			Thread connect = new Thread (thread);

@@ -47,7 +47,7 @@ public class TFTPSimManager  implements Runnable
 			byte temp[];
 			//  Construct  sendPacket to be sent to the server (to port 69)
 			clientPort = clientPacket.getPort();
-			temp = findError(serverPacket = new DatagramPacket(clientPacket.getData(),clientPacket.getLength(),InetAddress.getLocalHost(),serverPort));
+			temp = findRequestError(serverPacket = new DatagramPacket(clientPacket.getData(),clientPacket.getLength(),InetAddress.getLocalHost(),serverPort));
 			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
 			System.out.println();
 			serverPacket = new DatagramPacket(temp,temp.length,InetAddress.getLocalHost(),serverPort);
@@ -146,13 +146,20 @@ public class TFTPSimManager  implements Runnable
 		return false; 	
 	}
 	
+	private byte[] findRequestError(DatagramPacket packet) {
+		if(packet.getData()[0]==0 && packet.getData()[1]==this.packetType);
+		return packet.getData();
+	}
+	
 	private byte[] findError(DatagramPacket packet) {
-		byte temp[] = {packet.getData()[2],packet.getData()[3]};
+		byte temp[] = new byte[2];
+		System.arraycopy(packet.getData(), 2, temp, 0, 2);
 		if(packet.getData()[0]==0 && packet.getData()[1]==this.packetType && this.blockNumber.compare(temp)) return makeError(packet);
 		return packet.getData();
 	}
 	
 	private byte[] makeError(DatagramPacket packet) {
+		System.out.println("Error being generated.");
 		byte[] block = new byte[BUFFER_SIZE];
 		if (this.errorType == PACKET) {
 			System.arraycopy(packet.getData(), 0, block, 0, packet.getLength());

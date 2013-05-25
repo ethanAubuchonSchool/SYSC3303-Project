@@ -20,8 +20,8 @@ public class BlockNumber {
 	
 	public BlockNumber (int x) {
 		byte temp[] = new byte[2];
-		temp[1] = (byte)(x/(int)MAX);
-		temp[0] = (byte)(x%(int)MAX);
+		temp[0] = (byte) (x & 0xFF);
+		temp[1] = (byte) ((x >> 8) & 0xFF);
 	}
 	
 	public byte[] getNext() {
