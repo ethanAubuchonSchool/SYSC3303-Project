@@ -24,9 +24,10 @@ public class TFTPSimManager  implements Runnable
 	
 	//Data for error generation
 	private int errorType;
-	private byte packetType;
-	private BlockNumber blockNumber;
+	private byte[] comparitorA;
+	private byte[] comparitorB;
 	private int errorDetail;
+	private byte packetType;
 
 	
 	public TFTPSimManager( DatagramPacket dp, Error e ) {
@@ -35,10 +36,29 @@ public class TFTPSimManager  implements Runnable
 	    serverPort = 69;
 	    exitNext = false;
 	    
-	    this.packetType = e.getBlockType();
-	    this.blockNumber = e.getBlockNumber();
-	    this.errorDetail = e.getErrorDetail();
+	    this.comparitorA = new byte[4];
+	    this.comparitorB = new byte[4];
+	    this.comparitorA[0] = 0;
+	    this.comparitorA[1] = e.getBlockType();
+	    this.comparitorA[2] = e.getBlockNumber().getCurrent()[0];
+	    this.comparitorA[3] = e.getBlockNumber().getCurrent()[1];
+	    this.comparitorB = this.comparitorA;
+	    if (this.comparitorA[1] == 3) {
+	    	this.comparitorA[1] = 1;
+	    	this.comparitorB[1] = 2;
+	    } else if (this.comparitorA[1] == 1) {
+	    	this.comparitorA[1] = 3;
+	    	this.comparitorB[1] = 3;
+	    } else if (this.comparitorA[1] == 2) {
+	    	this.comparitorA[1] = 4;
+	    	this.comparitorB[1] = 4;
+	    }
 	    this.errorType = e.getErrorType();
+	    this.packetType = e.getBlockType();
+	    this.errorDetail = e.getErrorDetail();
+	    //System.out.println(errorType);
+	    //System.out.println("Looking for: "+this.errorDetail);
+	    
 	}
 
 	
@@ -154,12 +174,19 @@ public class TFTPSimManager  implements Runnable
 	private byte[] findError(DatagramPacket packet) {
 		byte temp[] = new byte[2];
 		System.arraycopy(packet.getData(), 2, temp, 0, 2);
-		if(packet.getData()[0]==0 && packet.getData()[1]==this.packetType && this.blockNumber.compare(temp)) return makeError(packet);
-		return packet.getData();
+		//System.out.println(packet.getData()[0]==0);
+		//System.out.println(packet.getData()[1]==this.packetType);
+		//System.out.println(this.blockNumber.compare(temp));
+		for (int i = 0; i < 4; i++) {
+			if(packet.getData()[i] != this.comparitorA[i] || packet.getData()[i] != this.comparitorB[i]) return packet.getData();
+		}
+		return makeError(packet);
 	}
 	
 	private byte[] makeError(DatagramPacket packet) {
+		System.out.println();
 		System.out.println("Error being generated.");
+		System.out.println();
 		byte[] block = new byte[BUFFER_SIZE];
 		if (this.errorType == PACKET) {
 			System.arraycopy(packet.getData(), 0, block, 0, packet.getLength());
@@ -186,7 +213,7 @@ public class TFTPSimManager  implements Runnable
 						for(i = 4; i < block.length; i++) {
 							if (block[i]==0) break;
 						}
-						temp = new byte[i+1];
+						temp = new byte[i];
 						System.arraycopy(block, 0, temp, 0, temp.length);
 						block = temp;
 						break;
@@ -195,7 +222,7 @@ public class TFTPSimManager  implements Runnable
 						for(i = 4; i < block.length; i++) {
 							if (block[i]==0) break;
 						}
-						temp = new byte[i+2];
+						temp = new byte[i+1];
 						System.arraycopy(block, 0, temp, 0, temp.length);
 						temp[temp.length-1] = 0;
 						block = temp;
@@ -236,7 +263,7 @@ public class TFTPSimManager  implements Runnable
 				
 				return block;
 				
-			} else if (this.packetType == DATA) {
+			} else if (this.packetType == 1) {//DATA
 				switch (this.errorDetail) {
 					case 1:
 						block[0]++;
@@ -267,7 +294,7 @@ public class TFTPSimManager  implements Runnable
 				}
 				
 				return block;
-			} else if (this.packetType == ACK) {
+			} else if (this.packetType == 2) {//ACK
 				switch (this.errorDetail) {
 					case 1:
 						block[0]++;

@@ -26,7 +26,7 @@ public class TFTPSim {
 	private DatagramSocket socket;
 	public int mode;
 	private byte packetType;
-	private int blockNumber;
+	private byte blockNumber;
 	private int errorDetail;
 	protected Error error;
 	
@@ -81,19 +81,18 @@ public class TFTPSim {
 		
 		for(;;) {
 				//while(!scanner.hasNextInt());
-				String temp = scanner.next();
-				input = Integer.parseInt(temp);
+				input = scanner.nextInt();
 			if(input==0) {
 				//this.error = new Error();
 				scanner.close();
 				return;
 			}
 			if(input==4) {
-				//System.out.println("Packet Error!");
+				System.out.println("Packet Error!");
 				packetError(scanner);
 				break;
 			} else if(input==5) {
-				//System.out.println("Packet Error!");
+				System.out.println("TIP Error!");
 				tipError(scanner);
 				break;
 			}
@@ -141,15 +140,15 @@ public class TFTPSim {
 				if (this.errorDetail>0 || this.errorDetail<=7) break;
 				System.out.println("Invalid option.  Please try again:");
 			}
-			error = new Error(TIP, this.packetType, new BlockNumber(this.blockNumber),this.errorDetail);
+			error = new Error(PACKET, this.packetType, new BlockNumber(this.blockNumber),this.errorDetail);
 			
 			return;
 		}
 		
 		//Select Block Number
-		System.out.println("Please select a block number to trigger the error: ");
+		System.out.println("Please select a block number to trigger the error (Must be under 127): ");
 		for(;;) {
-			this.blockNumber = scanner.nextInt();
+			this.blockNumber = scanner.nextByte();
 			if (this.blockNumber>0) break;
 			System.out.println("Invalid block number selection.  Please try again:");
 		}
@@ -170,7 +169,7 @@ public class TFTPSim {
 			if (this.errorDetail>0 || this.errorDetail<=4) break;
 			System.out.println("Invalid option.  Please try again:");
 		}
-		error = new Error(TIP, this.packetType, new BlockNumber(this.blockNumber),this.errorDetail);
+		error = new Error(PACKET, this.packetType, new BlockNumber(this.blockNumber),this.errorDetail);
 	}
 	
 	
@@ -193,9 +192,9 @@ public class TFTPSim {
 		System.out.println();
 		System.out.println();
 		
-		System.out.println("Please select a block number to trigger the error: ");
+		System.out.println("Please select a block number to trigger the error (Must be under 127): ");
 		for(;;) {
-			this.blockNumber = scanner.nextInt();
+			this.blockNumber = scanner.nextByte();
 			if (this.blockNumber>0 || (this.blockNumber==0 && this.packetType == (byte) 1)) break;
 			System.out.println("Invalid block number selection.  Please try again:");
 		} 

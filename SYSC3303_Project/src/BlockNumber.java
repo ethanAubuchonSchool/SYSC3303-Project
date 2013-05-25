@@ -18,10 +18,10 @@ public class BlockNumber {
 		numbers[1] = 0;
 	}
 	
-	public BlockNumber (int x) {
-		byte temp[] = new byte[2];
-		temp[0] = (byte) (x & 0xFF);
-		temp[1] = (byte) ((x >> 8) & 0xFF);
+	public BlockNumber (byte x) {
+		numbers = new byte[2];
+		numbers[1] = x;
+		numbers[0] = 0;
 	}
 	
 	public byte[] getNext() {
