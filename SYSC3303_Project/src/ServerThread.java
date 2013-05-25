@@ -84,7 +84,7 @@ handleRead();
 
           //   socket.send(err);
              System.out.println(request.getData()[1]);
-             System.out.println("INVALID OPCODE");
+             System.out.println("INVALID OPCODE expected READ or WRITE request got");
    	 socket.close();
                                 return;
 
@@ -120,18 +120,18 @@ handleRead();
 
 
 	
-	DatagramPacket err = FormError.illegalTFTP("INVALID OPCODE. expected READ or WRITE request got " + request.getData()[0]);
+								DatagramPacket err = FormError.illegalTFTP("No starting Zero Data[0]= " + request.getData()[0]);
                                 err.setAddress(request.getAddress());
                                 err.setPort(request.getPort());
                                 	try {
-   	socket.send(err);
-	} catch (IOException e) {
-	e.printStackTrace();
-	System.exit(1);
-	}
+   											socket.send(err);
+										} catch (IOException e) {
+											e.printStackTrace();
+												System.exit(1);
+																	}
                              
                                 System.out.println(request.getData()[0]);
-                                System.out.println("INVALID OPCODE");
+                                System.out.println("No starting Zero Data[0]");
                                         
                                 socket.close();
                                 return;
@@ -148,23 +148,23 @@ handleRead();
 
 	
 	
-	else{ requestType = Request.ERROR;//If not a read or write, sets request type to invalid
+	else if(!(data[1]==1 || data[2]==2)){ requestType = Request.ERROR;//If not a read or write, sets request type to invalid
 	 //**************************
 	
 	
-	DatagramPacket err = FormError.illegalTFTP("INVALID OPCODE. expected READ or WRITE request got " + request.getData()[1]);
+								DatagramPacket err = FormError.illegalTFTP("INVALID OPCODE. expected READ or WRITE request got " + request.getData()[1]);
                                 err.setAddress(request.getAddress());
                                 err.setPort(request.getPort());
                                 
                                	try {
-   	socket.send(err);
-	} catch (IOException e) {
+   										socket.send(err);
+								} catch (IOException e) {
 
-e.printStackTrace();
-	System.exit(1);
-	}
+											e.printStackTrace();
+														System.exit(1);
+																		}
                                 System.out.println(request.getData()[1]);
-                                System.out.println("INVALID OPCODE");
+                                System.out.println("INVALID OPCODE expected READ or WRITE request got " + request.getData()[1]);
                                         
                                 socket.close();
                                 return;
@@ -182,30 +182,32 @@ e.printStackTrace();
 	
 	
 	
-	if(data[2]<=0) 	  //************************** Missing filename
+	else if(data[2]<=0) 	  //************************** Missing filename
 	 //**************************
 	{
 	
-	DatagramPacket err = FormError.illegalTFTP("Missing File name." + request.getData()[2]);
+								DatagramPacket err = FormError.illegalTFTP("Missing File name." + request.getData()[2]);
                                 err.setAddress(request.getAddress());
                                 err.setPort(request.getPort());
                                                                	try {
-   	socket.send(err);
-	} catch (IOException e) {
-	e.printStackTrace();
-	System.exit(1);
-	}
-                                System.out.println(request.getData()[2]);
-                                System.out.println("Missing File name.");
+  																	 	socket.send(err);
+																			} catch (IOException e) {
+																			e.printStackTrace();
+																			System.exit(1);
+																			}
+                                											System.out.println(request.getData()[2]);
+                               												 System.out.println("Missing File name.");
                                         
-                                socket.close();
-                                return;
+                               												 socket.close();
+                               														 return;
 
 	}
 	
 	 //**************************
 	
-	if (requestType!=Request.ERROR) {
+ 
+		
+	
 	//find filename
 	int fileCount;//keeps track of position in data array while getting file name
 	//finds length of file name (number of bytes between request type and next 0 or end of array)
@@ -213,7 +215,7 @@ e.printStackTrace();
 	if (data[fileCount] == 0) break;
 	}
 	if (fileCount==length) {requestType=Request.ERROR;
-	DatagramPacket err = FormError.illegalTFTP("No zero after the file name." + request.getData());
+								DatagramPacket err = FormError.illegalTFTP("No zero after the file name." + request.getData());
                                 err.setAddress(request.getAddress());
                                 err.setPort(request.getPort());
                                                                 	try {
@@ -262,24 +264,24 @@ if(!(mode.equalsIgnoreCase("octet")||mode.equalsIgnoreCase("netascii"))){
                                 return;
 	
 	}
-	if(modeCount!=length-1) {requestType=Request.ERROR;
-	DatagramPacket err = FormError.illegalTFTP("there is  data after final zero." + request.getData());
+	if(!(modeCount==length || modeCount==length-1 || modeCount==length+1) && !(request.getData()[length-1]==0) ) {requestType=Request.ERROR;
+								DatagramPacket err = FormError.illegalTFTP("there is  data after final zero." + request.getData());
                                 err.setAddress(request.getAddress());
                                 err.setPort(request.getPort());
                                                                 	try {
-   	socket.send(err);
-	} catch (IOException e) {
-	e.printStackTrace();
-	System.exit(1);
-	}
+   																socket.send(err);
+																} catch (IOException e) {
+																		e.printStackTrace();
+																					System.exit(1);
+																						}
                                 System.out.println(request.getData());
-                                System.out.println("there is  data after final zero");
+                                System.out.println("there is  data after final zero"+fileCount+" "+modeCount);
                                         
                                 socket.close();
                                 return;	//**************************	//**************************
 	
 	}//Checks that there is no data after final zero
-	}
+	
 	}
 	
 /********************************************************************************************************/
@@ -319,6 +321,7 @@ if(!(mode.equalsIgnoreCase("octet")||mode.equalsIgnoreCase("netascii"))){
 	System.out.println("Sending to ip: " + ip);
 	System.out.println("Sending to port: " + port);
 	//sends packet via default port
+	
 	socket.send(send);
 
 } catch (IOException e) {
@@ -436,13 +439,13 @@ handleError();
               socket.send(err);
               continue;}
 	 	
-	 if(!checkForErrors(temp, 3, socket)){out.close(); break; 	};
+	 else if(!checkForErrors(temp, 3, socket)){out.close(); break; 	};
                                                 	
                                                 	
            
 //****************************************************************************                                     	
 	 	
-	    System.out.println("Data received");
+	 System.out.println("Data received");
 	byte bn[] = new byte[2];
 	System.arraycopy(temp.getData(), 2, bn, 0, 2);
 	if (temp.getData()[0] == 0 && temp.getData()[1] == DATA && blockNumber.compare(bn)) {
@@ -642,7 +645,8 @@ class FormError {
                 data = FormStart(data, msg, four);
 
                 DatagramPacket packet = new DatagramPacket(data, data.length);
-                
+                String m=new String(packet.getData());
+                System.out.println(m);
                 return packet;
         }
         /**
