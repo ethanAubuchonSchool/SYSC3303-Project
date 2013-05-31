@@ -13,12 +13,17 @@ public class TFTPSimManager  implements Runnable
 	
 	public static final int TIP = 2;
 	public static final int PACKET = 1;
+	public static final int NETWORK = 0;
+	
+	public static final int DELAY = 8;
+	public static final int DELETE = 9;
+	public static final int DUPLICATE = 10;
 
 
 	
 	// UDP datagram packets and sockets used to send / receive
-	private DatagramPacket clientPacket, serverPacket;
-	private DatagramSocket clientSocket, serverSocket;
+	private DatagramPacket incomingPacket, outgoingPacket;
+	private DatagramSocket socket;
 	private boolean exitNext;
 	private int clientPort,serverPort;
 	
@@ -32,7 +37,7 @@ public class TFTPSimManager  implements Runnable
 	
 	public TFTPSimManager( DatagramPacket dp, Error e ) {
 	  	// Get a reference to the data inside the received datagram.
-	    clientPacket = dp;
+	    incomingPacket = dp;
 	    serverPort = 69;
 	    exitNext = false;
 	    
@@ -55,10 +60,7 @@ public class TFTPSimManager  implements Runnable
 	    }
 	    this.errorType = e.getErrorType();
 	    this.packetType = e.getBlockType();
-	    this.errorDetail = e.getErrorDetail();
-	    //System.out.println(errorType);
-	    //System.out.println("Looking for: "+this.errorDetail);
-	    
+	    this.errorDetail = e.getErrorDetail();	    
 	}
 
 	
@@ -66,34 +68,20 @@ public class TFTPSimManager  implements Runnable
 		try {
 			byte temp[];
 			//  Construct  sendPacket to be sent to the server (to port 69)
-			clientPort = clientPacket.getPort();
-			temp = findRequestError(serverPacket = new DatagramPacket(clientPacket.getData(),clientPacket.getLength(),InetAddress.getLocalHost(),serverPort));
+			clientPort = incomingPacket.getPort();
+			temp = findRequestError(outgoingPacket = new DatagramPacket(incomingPacket.getData(),incomingPacket.getLength(),InetAddress.getLocalHost(),serverPort));
 			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
 			System.out.println();
-			serverPacket = new DatagramPacket(temp,temp.length,InetAddress.getLocalHost(),serverPort);
+			outgoingPacket = new DatagramPacket(temp,temp.length,InetAddress.getLocalHost(),serverPort);
 			System.out.println("Recieved Packet from client");
-			serverSocket = new DatagramSocket();
-			serverSocket.send(serverPacket);
+			socket = new DatagramSocket();
+			socket.send(outgoingPacket);
 			System.out.println("Forwarded packet to server");
-			if(checkForEnd(serverPacket.getData()))return;
+			if(checkForEnd(outgoingPacket.getData()))return;
 			
-			byte data[] = new byte[BUFFER_SIZE];
-			serverPacket = new DatagramPacket(data,BUFFER_SIZE,InetAddress.getLocalHost(),serverPort);
-			serverSocket.receive(serverPacket);
-			serverPort = serverPacket.getPort();
-			System.out.println("Recieved packet from server");
-			temp = findError(clientPacket = new DatagramPacket (serverPacket.getData(),serverPacket.getLength(),InetAddress.getLocalHost(),clientPort));
-			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
-			System.out.println();
-			clientPacket = new DatagramPacket (temp,temp.length,InetAddress.getLocalHost(),clientPort);
-			clientSocket = new DatagramSocket();
-			clientSocket.send(clientPacket);
-			System.out.println("Forwarded packet to client");
-			if(checkForEnd(clientPacket.getData()))return;
 		
 			for(;;) {
-				if(clientToServer()) return;
-				if(serverToClient()) return;
+				if(forwardPacket()) return;
 			}
 			
 		} catch (SocketException e) {
@@ -120,19 +108,35 @@ public class TFTPSimManager  implements Runnable
 		return false;
 	}
   
-	private boolean clientToServer() {
+	private boolean forwardPacket() {
 		byte data[] = new byte[BUFFER_SIZE];
+		int outgoingPort;
 		try {
-			clientPacket = new DatagramPacket(data,BUFFER_SIZE,InetAddress.getLocalHost(),clientPort);
-			clientSocket.receive(clientPacket);
-			System.out.println("Recieved packet from client");
-			byte temp[] = findError(serverPacket = new DatagramPacket(clientPacket.getData(),clientPacket.getLength(),InetAddress.getLocalHost(),serverPort));
-			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
-			System.out.println();
-			serverPacket = new DatagramPacket(temp,temp.length,InetAddress.getLocalHost(),serverPort);
-			serverSocket.send(serverPacket);
-			System.out.println("Forwarded packet to server");
-			return checkForEnd(clientPacket.getData());
+			incomingPacket = new DatagramPacket(data,BUFFER_SIZE,InetAddress.getLocalHost(),clientPort);
+			socket.receive(incomingPacket);
+			if(incomingPacket.getPort()==this.clientPort) {
+				System.out.println("Recieved packet from client");
+				outgoingPort = this.serverPort;
+			} else if (this.serverPort == 69 || incomingPacket.getPort()==this.serverPort) {
+				if (this.serverPort == 69) this.serverPort = incomingPacket.getPort();
+				System.out.println("Recieved packet from server");
+				outgoingPort = this.clientPort;
+			} else {
+				System.out.println("Error with port number");
+				System.exit(1);
+				outgoingPort = 0; // Won't be reached but is used to stop errors in eclipse
+			}
+			byte temp[] = findError(outgoingPacket = new DatagramPacket(incomingPacket.getData(),incomingPacket.getLength(),InetAddress.getLocalHost(),outgoingPort));
+			if(temp == null) {
+				System.out.println("Packet Deleted");
+			} else {
+				for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
+				System.out.println();
+				outgoingPacket = new DatagramPacket(temp,temp.length,InetAddress.getLocalHost(),outgoingPort);
+				socket.send(outgoingPacket);
+				System.out.println("Forwarded packet to server");
+			}
+			return checkForEnd(incomingPacket.getData());
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -140,31 +144,11 @@ public class TFTPSimManager  implements Runnable
 			e.printStackTrace();
 			System.exit(1);
 		}
+			
+		
 		return false; 	
 	}
-  
-	private boolean serverToClient() {
-		byte data[] = new byte[BUFFER_SIZE];
-		try {
-			serverPacket = new DatagramPacket(data,BUFFER_SIZE,InetAddress.getLocalHost(),serverPort);
-			serverSocket.receive(serverPacket);
-			System.out.println("Recieved packet from server");
-			byte temp[] = findError(clientPacket = new DatagramPacket (serverPacket.getData(),serverPacket.getLength(),InetAddress.getLocalHost(),clientPort));
-			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
-			System.out.println();
-			clientPacket = new DatagramPacket (temp,temp.length,InetAddress.getLocalHost(),clientPort);
-			clientSocket.send(clientPacket);
-			System.out.println("Forwarded packet to client");
-			return checkForEnd(serverPacket.getData());
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			System.exit(1);
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
-		return false; 	
-	}
+
 	
 	private byte[] findRequestError(DatagramPacket packet) {
 		if(packet.getData()[0]==0 && packet.getData()[1]==this.packetType);
@@ -174,9 +158,6 @@ public class TFTPSimManager  implements Runnable
 	private byte[] findError(DatagramPacket packet) {
 		byte temp[] = new byte[2];
 		System.arraycopy(packet.getData(), 2, temp, 0, 2);
-		//System.out.println(packet.getData()[0]==0);
-		//System.out.println(packet.getData()[1]==this.packetType);
-		//System.out.println(this.blockNumber.compare(temp));
 		for (int i = 0; i < 4; i++) {
 			if(packet.getData()[i] != this.comparitorA[i] || packet.getData()[i] != this.comparitorB[i]) return packet.getData();
 		}
@@ -200,7 +181,7 @@ public class TFTPSimManager  implements Runnable
 						break;
 						
 					case 2:
-						block[1]++;
+						block[1]=-2;
 						break;
 						
 					case 3:
@@ -367,7 +348,31 @@ public class TFTPSimManager  implements Runnable
 				System.out.println("Socket Exception Error");
 				System.exit(1);
 			}
-			
+		} else if (this.errorType == NETWORK) {
+			if (this.errorDetail == DELAY) {
+				//Delay the packet
+				try {
+					Thread.sleep(500);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+					System.exit(1);
+				}
+				return packet.getData();
+			} else if (this.errorDetail == DELETE) {
+				return null;
+			} else if (this.errorDetail == DUPLICATE) {
+				try {
+					this.socket.send(packet);
+					Thread.sleep(500);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+					System.exit(1);
+				} catch (IOException e) {
+					e.printStackTrace();
+					System.exit(1);
+				}
+				return packet.getData();
+			}
 		} else {
 			System.out.println("Incorrect error type.  Shutting down.");
 			System.exit(1);

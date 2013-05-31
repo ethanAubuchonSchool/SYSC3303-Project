@@ -16,6 +16,7 @@ public class TFTPSim {
 	
 	public static final int TIP = 2;
 	public static final int PACKET = 1;
+	public static final int NETWORK = 0;
 	public static final int DATA = 1;
 	public static final int ACK = 2;
 	public static final int REQ = 3;
@@ -77,6 +78,9 @@ public class TFTPSim {
 		System.out.println("0) No Error");
 		System.out.println("4) Packet Error");
 		System.out.println("5) TID Error");
+		System.out.println("8) Delayed Packet");
+		System.out.println("9) Deleted Packet");
+		System.out.println("10) Duplicated Packet");
 		System.out.println("Choose: ");
 		
 		for(;;) {
@@ -95,11 +99,47 @@ public class TFTPSim {
 				System.out.println("TIP Error!");
 				tipError(scanner);
 				break;
+			} else if(input>=8 && input<=10) {
+				errorDetail = input;
+				networkError(scanner);
+				break;
 			}
 			System.out.println("Invalid option.  Please try again:");
 			
 		}
 		//scanner.close();
+	}
+	
+	private void networkError(Scanner scanner) {
+		//Select Packet Type
+				System.out.println("Network Error:");
+				System.out.println();
+				System.out.println("Select packet type:");
+				System.out.println("1) DATA");
+				System.out.println("2) ACK");
+				System.out.println("3) REQ");
+				for(;;) {
+					this.packetType = scanner.nextByte();
+					if (this.packetType!=DATA || this.packetType!=ACK || this.packetType!=REQ) break;
+					System.out.println("Invalid block selection.  Please try again:");
+				} 
+				
+				System.out.println();
+				System.out.println();
+				
+				if (this.packetType == REQ) {
+					error = new Error(PACKET, this.packetType, new BlockNumber(this.blockNumber),this.errorDetail);
+					return;
+				}
+				
+				//Select Block Number
+				System.out.println("Please select a block number to trigger the error (Must be under 127): ");
+				for(;;) {
+					this.blockNumber = scanner.nextByte();
+					if (this.blockNumber>0) break;
+					System.out.println("Invalid block number selection.  Please try again:");
+				}
+				error = new Error(0, this.packetType, new BlockNumber(this.blockNumber),this.errorDetail);
 	}
 	
 	
