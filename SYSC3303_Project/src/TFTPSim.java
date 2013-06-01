@@ -73,7 +73,6 @@ public class TFTPSim {
 	public void setupErrorMode(Scanner scanner) {
 		
 		int input;
-		//Scanner scanner = new Scanner( System.in );
 		System.out.println("Which type of error do you wish to generate? (select by number):");
 		System.out.println("0) No Error");
 		System.out.println("4) Packet Error");
@@ -84,10 +83,8 @@ public class TFTPSim {
 		System.out.println("Choose: ");
 		
 		for(;;) {
-				//while(!scanner.hasNextInt());
 				input = scanner.nextInt();
 			if(input==0) {
-				//this.error = new Error();
 				scanner.close();
 				return;
 			}
@@ -107,7 +104,6 @@ public class TFTPSim {
 			System.out.println("Invalid option.  Please try again:");
 			
 		}
-		//scanner.close();
 	}
 	
 	private void networkError(Scanner scanner) {
