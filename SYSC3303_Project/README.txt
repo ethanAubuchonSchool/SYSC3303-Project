@@ -1,4 +1,4 @@
-SYSC 3303 Project Iteration 1
+SYSC 3303 Project Iteration 3
 Group 4
 
 This was written using eclipse
@@ -8,14 +8,16 @@ This was written using eclipse
 2) Start the TFTPSim.java
 3) If you wish to test the server by activating the simulator type 'y'.  Otherwise (for normal operation) press 'n'.
 4) Start the Client.java
-5) The client will prompt you to choose either a read or a write.
+NOTE: Steps 5 and 6 are only to be followed if the simulator is turned on.
+5) Navigate to the simulator view
+6) Navigate through the menus to set up your error by typing the corresponding number.
+
+7) The client will prompt you to choose either a read or a write.
 	press 1 and enter to perform a read operation
 	press 2 and enter to perform a write operation
-6) type in the name of the file you wish to use
-7) type in the mode of encoding you wish to use (netascii or octet).
-NOTE: Steps 8 and 9 are only to be followed if the simulator is turned on.
-8) Navigate to the simulator view
-9) Navigate through the menus to set up your error by typing the corresponding number.
+8) type in the name of the file you wish to use
+9) type in the mode of encoding you wish to use (netascii or octet).
+
 
 To Start another transaction simply launch another Client.java and complete steps 5-9 again.
 

@@ -19,6 +19,8 @@ public class ServerThread implements Runnable{
 	private String mode;
 	private Request requestType;
 	private int ackCount;
+	private int TIMEOUT = 500;	
+	int MAX_TIMEOUTS = 3;
 	
 	/**
 	 * Constructor for ServerThread
@@ -295,6 +297,7 @@ public class ServerThread implements Runnable{
 		byte[] msg;//buffer used to send data to client
 		byte[] data = new byte[MESSAGE_SIZE];//buffer used to hold data read from file
 		int n;
+		DatagramPacket sendPacket;
 		
 		//Reads data from file and makes sure data is still read
 		do {
@@ -308,33 +311,38 @@ public class ServerThread implements Runnable{
 			
 			//Data read from file
 			
-			DatagramPacket send = new DatagramPacket(msg,msg.length,ip,port);
-			try {
-				System.out.println("Sending to ip: " + ip);
-				System.out.println("Sending to port: " + port);
-				//sends packet via default port
-					
-				socket.send(send);
-			
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(1);
-			}
-			System.out.println("Sent chunk");
-		
-		
-		
 			byte ack[] = new byte[BUFFER_SIZE];//Ack data buffer
 			DatagramPacket temp = new DatagramPacket (ack, ack.length);//makes new packet to receive ack from client
 			
+			boolean received = false;
+			System.out.println("Sending to ip: " + ip);
+			System.out.println("Sending to port: " + port);
+			int count = 0;
+			while(!received)
+			{
+							
+				try{
+					socket.setSoTimeout(TIMEOUT);
+					sendPacket = new DatagramPacket(msg,msg.length,ip,port);	
+					socket.send(sendPacket);
+					socket.receive(temp);//Receives ack from client on designated socket
+					//handleError("acks");
+					//Checks for proper Ack size	//**************************
+					received = true;
+				}catch(SocketTimeoutException ste) {
+                    System.out.println("'SERVERTHREAD.JAVA' : Sending again to ip(TIMEOUT): " + ip);
+					System.out.println("'SERVERTHREAD.JAVA' : Sending again to port(TIMEOUT): " + port);
+                    if(count >=MAX_TIMEOUTS) {
+                            //We don't throw errors here
+                          System.out.println("Server Timed out time #"+ MAX_TIMEOUTS);
+                          return;
+                    }				
+				}catch (IOException e){
+					System.exit(1);
+				}
+			}
 			
 			try {
-				//****************************************************************************
-				socket.receive(temp);//Receives ack from client on designated socket
-				//handleError("acks");
-				//Checks for proper Ack size	//**************************
-			
-			
 				if(temp.getPort() != request.getPort()){
 				    DatagramPacket err = FormError.unknownTransferID("Unkown client.");
 				    err.setPort(temp.getPort());
@@ -348,6 +356,8 @@ public class ServerThread implements Runnable{
 				    System.out.println("");
 				    return;
 				}
+				
+				
 				
 				//****************************************************************************	
 				byte block[] = new byte[2];
@@ -411,12 +421,36 @@ public class ServerThread implements Runnable{
 		for(;;) {
 			incomingMsg = new byte[BUFFER_SIZE];
 			DatagramPacket temp = new DatagramPacket (incomingMsg, incomingMsg.length);
+			
+			boolean received = false;
+			System.out.println("Waiting for data");
+			int count = 0;
+			while(!received)
+			{
+				
+				
+				try{
+					socket.setSoTimeout(TIMEOUT*2);
+					socket.receive(temp);					
+					received = true;
+				}catch(SocketTimeoutException e){
+					count++;
+					System.out.println("'SERVERTHREAD.JAVA':Waiting for data again(TIMEOUT)");
+                    if(count >=MAX_TIMEOUTS) {
+                    	//We don't throw errors here
+                        System.out.println("Server Timed out time #"+ MAX_TIMEOUTS);
+                        return null;
+				}
+				}catch(IOException e){
+					System.exit(1);
+				}
+
+					
+				
+			}
 	
 			try {
-				System.out.println("Waiting for data");
-				socket.receive(temp);
-	
-	
+				
 				/*********************************************************/
 				if(port!=temp.getPort()){
 					DatagramPacket err = FormError.unknownTransferID("Unkown client.");
@@ -435,11 +469,16 @@ public class ServerThread implements Runnable{
 				System.out.println("Data received");
 				byte bn[] = new byte[2];
 				System.arraycopy(temp.getData(), 2, bn, 0, 2);
-				if (temp.getData()[0] == 0 && temp.getData()[1] == DATA && blockNumber.compare(bn)) {
-					System.out.println("Data good");
-					System.arraycopy(temp.getData(), 4,data, 0, temp.getLength()-4);
-					return data;
+				if (temp.getData()[0] == 0 && temp.getData()[1] == DATA) {
+					if(blockNumber.lessThanOrEqualTo(bn)){
+						System.out.println("Data good");
+						System.arraycopy(temp.getData(), 4,data, 0, temp.getLength()-4);
+						return data;
+					}else{
+						
+					}
 				}
+			
 	
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -449,6 +488,7 @@ public class ServerThread implements Runnable{
 		}
 		return data;	
 	}
+	
 	
 	/**
 	 * Uses getBlock() and sendAck() methods to get data and send the appropriate ack
@@ -464,7 +504,7 @@ public class ServerThread implements Runnable{
 				bn.increment();
 				ackCount++;
 				byte[] temp = getBlock(bn,out);
-	
+				if(temp == null) return;
 				int length;
 	
 				for(length = 4; length < temp.length; length++) {

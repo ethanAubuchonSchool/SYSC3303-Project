@@ -53,4 +53,10 @@ public class BlockNumber {
 		if(n[1] != numbers[1]) tester =  false;
 		return tester;
 	}
+	
+	public boolean lessThanOrEqualTo(byte n[]) {
+		if(n[1] < this.numbers[1]) return true;
+		if(n[1] == this.numbers[1] && n[0] <= this.numbers[0])return true;
+		return false;
+	}
 }

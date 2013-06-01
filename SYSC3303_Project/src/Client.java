@@ -1,5 +1,4 @@
 
-
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
@@ -25,12 +24,19 @@ public class Client  {
 	private int counter;
 	private DatagramPacket block;
 	private DatagramPacket readpack;   
-	   
+	
+	private byte ack[];
+
+	private int count=0;
+	private int TIMEOUT = 500;	
+	int MAX_TIMEOUTS = 3;														//Maximum timeouts before abort
+	private boolean received;   
+    //private boolean ex; 	//to terminate
 	public Client(){
-		counter = 0;
+		
 		
 		wellKnownPort = 68;
-		
+		sendPort = 0;
 		  try {
 		         // Construct a datagram socket and bind it to any available
 		         // port on the local host machine. This socket will be used to
@@ -48,23 +54,30 @@ public class Client  {
 	}
 
 	public void run(){
-		msg = new byte[BUFFER_SIZE];
-		System.out.println("1) Read");
-		System.out.println("2) Write");
-		System.out.println("Select a mode:");
-		Scanner scanner = new Scanner (System.in);
-		int request = scanner.nextInt();
-		System.out.println("Type File name: ");
-		file = scanner.next();
-		System.out.println("Type mode: ");
-		mode = scanner.next();
-		msg[0] = 0;
-		scanner.close();
-		
-		
+			for(;;) {
+			counter = 0;
+			msg = new byte[BUFFER_SIZE];
+			System.out.println("1) Read");
+			System.out.println("2) Write");
+			System.out.println("3) To terminate");
+			System.out.println("Select a mode:");
+			Scanner scanner = new Scanner (System.in);
+			int request = scanner.nextInt();
+			System.out.println("Type File name: ");
+			file = scanner.next();
+			System.out.println("Type mode: ");
+			mode = scanner.next();
+			msg[0] = 0;
+			
+			
+			
 			this.sendPort = 0;
 			int iterator = 2;
-			if (request == 2){
+			if(request==3){
+				scanner.close();
+				terminate();
+			}
+			else if (request == 2){
 				msg[1] = 2;
 				System.arraycopy(file.getBytes(),0,msg,iterator,file.getBytes().length);
 				iterator+=file.getBytes().length;
@@ -73,7 +86,7 @@ public class Client  {
 				System.arraycopy(mode.getBytes(),0,msg,iterator,mode.getBytes().length);
 				iterator+=mode.getBytes().length;
 				msg[iterator] = 0;	
-				sendData(iterator+1);
+				sendData(iterator+1,2);
 				clientWrite();
 				
 			}else if(request == 1){
@@ -85,132 +98,219 @@ public class Client  {
 				System.arraycopy(mode.getBytes(),0,msg,iterator,mode.getBytes().length);
 				iterator+=mode.getBytes().length;
 				msg[iterator] = 0;	
-				sendData(iterator+1);
+				sendData(iterator+1,1);
 				clientRead();		
 			}else{
 				System.out.println("Request error");
 			}
+		}
 	}
 	
-	public void sendData(int size){
-		 try {
-			 System.out.println("Sending packet to port: "+this.wellKnownPort);
-			 for (int i = 0; i < size; i++) {
-				 System.out.print(msg[i]);
-			 }
-			 System.out.println();
-			 sendPacket = new DatagramPacket(this.msg, size,InetAddress.getLocalHost(), this.wellKnownPort);
-			 sendReceiveSocket.send(sendPacket);
-	        } catch (IOException e) {
-	           e.printStackTrace();
-	           System.exit(1);
-	        }
+	public void sendData(int size, int reqt){  //add new para to  method reqt(r or w=1 or 2)
+		if(reqt==1){
+			received = false;
+			count=0;
+            while(!received) {  
+            	System.out.println("Sending RT: Read to port: "+this.wellKnownPort);
+    			for (int i = 0; i < size; i++) {
+    				System.out.print(msg[i]);
+    			}
+    			System.out.println();
+    			try{  
+    				sendPacket = new DatagramPacket(this.msg, size,InetAddress.getLocalHost(), this.wellKnownPort);
+    				}catch(UnknownHostException e){ 
+    					System.out.println(e);
+    					System.exit(1);
+    				}
+    			try{
+    				sendReceiveSocket.send(sendPacket);
+    			}catch(IOException e){
+    				System.out.println(e);
+    				System.exit(1);
+    			}
+		
+                    try {
+                    	sendReceiveSocket.setSoTimeout(TIMEOUT);
+                    }catch (SocketException ex) {
+                    	System.exit(1);
+                    }//TIMEOUT=500 MS
+                  
+                    System.out.println("Waiting for response");
+                    ack = new byte[BUFFER_SIZE];
+					DatagramPacket tem = new DatagramPacket (ack,ack.length );//makes new packet to receive ack from ser
+					
+				try {
+						sendReceiveSocket.receive(tem);
+
+
+                received = true;
+                } catch(SocketTimeoutException ste) {
+                    count++;
+	                if(count >= MAX_TIMEOUTS) {   //TRY FOR THREE TIMES
+	                	//We don't throw errors here
+	                	System.out.println("Server Timed out time #"+ MAX_TIMEOUTS);
+	                	return;
+	                }
+                }catch(IOException e){ 
+                	System.out.println(e); 
+                	System.exit(1);
+                }
+            
+           }
+		
+            
+
+	        
+		}else if(reqt==2){       
+			received = false;
+			count=0;
+            	System.out.println("Sending RT= Write to port: "+this.wellKnownPort);
+            	for (int i = 0; i < size; i++) {
+					 System.out.print(msg[i]);
+			 	}
+				System.out.println();
+			    try {
+			    	sendPacket = new DatagramPacket(this.msg, size,InetAddress.getLocalHost(), this.wellKnownPort);
+			    }catch(UnknownHostException e){ 
+			    	System.out.println(e); 
+			    	System.exit(1); 
+			    }	
+				try{  
+					sendReceiveSocket.send(sendPacket);
+				}catch(IOException e){ 
+					System.out.println(e); 
+					System.exit(1); 
+				}	
+				}
+
+		
+		
+		/****************************************/
+		
+		
+
 
 	        System.out.println("Client: Packet sent.");
 	}
 	
 	public void clientWrite(){
+		
 		try {
 			//Opens an input stream
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(FILE_DIR+file));
 			
 			bnum = new BlockNumber();
 			
-			byte[] pack;//buffer used to send data to client
+			byte[] pack = null;//buffer used to send data to client
 			byte[] data;//buffer used to hold data read from file
 			int n;
 			
 			//Reads data from file and makes sure data is still read
 			do {
 				data = new byte[MESSAGE_SIZE];
-				for(;;) {
-					byte ack[] = new byte[BUFFER_SIZE];//Ack data buffer
-					DatagramPacket temp = new DatagramPacket (ack, ack.length);//makes new packet to receive ack from client
-					try {
-						System.out.println("Waiting for Ack " + counter);
-						counter++;
-						sendReceiveSocket.receive(temp);//Receives ack from client on designated socket
-						
-						if (this.sendPort == 0) 
-							this.sendPort = temp.getPort();
-						
-						
-						if (sendPort != temp.getPort()){  // checking for error 5
-							byte[] error5 = new byte[BUFFER_SIZE];
-							error5[0] = 0;
-							error5[1] = ERROR;
-							error5[2] = 0;
-							error5[3] = 5;
-							String errorMessage;
-							
-							if(sendPort != temp.getPort()){
-								System.out.println("Error 5: unknown port");
-								errorMessage = "Unknow Port";
-							}else{
-								System.out.println("Error 5: unknown IP Address");
-								errorMessage = "Unknow IP Address";
+				byte ack[] = new byte[BUFFER_SIZE];//Ack data buffer
+				DatagramPacket temp = new DatagramPacket (ack, ack.length);//makes new packet to receive ack from client
+				try {
+					System.out.println("Waiting for Ack " + counter);
+					int count = 0;
+					for(;;){
+						sendReceiveSocket.setSoTimeout(TIMEOUT);
+						try {
+							sendReceiveSocket.receive(temp);//Receives ack from client on designated socket
+							break;
+						} catch (SocketTimeoutException e) {
+							System.out.println("Timeout waiting for Ack " + counter);
+							count++;
+							if (count >= MAX_TIMEOUTS) {
+								System.out.println("Too many timeouts. Connection lost.");
+								return;
 							}
-							
-							System.arraycopy(errorMessage.getBytes(),0,error5,4,errorMessage.getBytes().length);
-							error5[4 + errorMessage.getBytes().length] = 0;
-							DatagramPacket errorPacket = new DatagramPacket(error5, error5.length,temp.getAddress(), temp.getPort());
-							sendReceiveSocket.send(errorPacket);
-							//waiting to receive the correct acknowledgment and repeats
-							//the loop if it is again from unknown port or IP.
-							sendReceiveSocket.receive(temp);
+							if(counter == 0){
+								sendReceiveSocket.send(new DatagramPacket(msg,msg.length,InetAddress.getLocalHost(),this.wellKnownPort));
+							} else {
+								sendReceiveSocket.send(new DatagramPacket(pack,pack.length,InetAddress.getLocalHost(), this.sendPort));
+							}
+						}
+					}
+					counter++;
+					if (this.sendPort == 0) {
+						this.sendPort = temp.getPort();
+					}
+					
+					if (sendPort != temp.getPort()){  // checking for error 5
+						byte[] error5 = new byte[BUFFER_SIZE];
+						error5[0] = 0;
+						error5[1] = ERROR;
+						error5[2] = 0;
+						error5[3] = 5;
+						String errorMessage;
+						
+						if(sendPort != temp.getPort()){
+							System.out.println("Error 5: unknown port");
+							errorMessage = "Unknow Port";
+						}else{
+							System.out.println("Error 5: unknown IP Address");
+							errorMessage = "Unknow IP Address";
 						}
 						
-						System.out.println("Recieved Ack ");
-						byte bn[] = new byte[2];
-						System.arraycopy(temp.getData(), 2, bn, 0, 2);
-						
-							while(temp.getData()[1] == ERROR){
-								if(temp.getData()[3] == 4){
-									System.exit(1);
-								}else{
-									sendReceiveSocket.send(block);
-									System.out.println("sending the corrupted  block");
-								}
-							}
-						
-						
-							if(temp.getData()[0] == 0 && temp.getData()[1] == ACK && bnum.compare(bn)) {
-								System.out.println("Ack good");
-								break;
+						System.arraycopy(errorMessage.getBytes(),0,error5,4,errorMessage.getBytes().length);
+						error5[4 + errorMessage.getBytes().length] = 0;
+						DatagramPacket errorPacket = new DatagramPacket(error5, error5.length,temp.getAddress(), temp.getPort());
+						sendReceiveSocket.send(errorPacket);
+					}
+					
+					System.out.println("Recieved Ack ");
+					byte bn[] = new byte[2];
+					System.arraycopy(temp.getData(), 2, bn, 0, 2);
+					
+						while(temp.getData()[1] == ERROR){
+							if(temp.getData()[3] == 4){
+								System.out.println("Packet Error recieved");
+								return;
 							}else{
-								byte[] error4 = new byte[BUFFER_SIZE];
-								error4[0] = 0;
-								error4[1] = ERROR;
-								error4[2] = 0;
-								error4[3] = 4;
-								String errorMessage;
+								System.out.println("TIP Error recieved");
+								return;
 								
-								if(temp.getData()[0] != 0){
-									errorMessage = "first byte of ACK is not 0";
-									System.out.println(errorMessage);
-								}else if(temp.getData()[1] != ACK){
-									errorMessage = "second byte of ACK is not ACK code '4'";
-									System.out.println(errorMessage);
-								}else{
-									errorMessage = "Block number is not matched";
-									System.out.println(errorMessage);
-								}
-								
-								System.arraycopy(errorMessage.getBytes(),0,error4,4,errorMessage.getBytes().length);
-								error4[4 + errorMessage.getBytes().length] = 0;
-								DatagramPacket errorPacket = new DatagramPacket(error4, error4.length,temp.getAddress(), temp.getPort());
-								sendReceiveSocket.send(errorPacket);
-								System.out.println("the error 4 has been sent and request is starting again");
-								System.exit(1);
 							}
-						
-						
-					} catch (IOException e) {
-						e.printStackTrace();
-						System.out.println("Ack Reception Error");
-						System.exit(1);
-					}					
-				}				
+						}
+					
+					
+						if(temp.getData()[0] == 0 && temp.getData()[1] == ACK && bnum.lessThanOrEqualTo(bn)) {
+							System.out.println("Ack good");
+						}else{
+							byte[] error4 = new byte[BUFFER_SIZE];
+							error4[0] = 0;
+							error4[1] = ERROR;
+							error4[2] = 0;
+							error4[3] = 4;
+							String errorMessage;
+							
+							if(temp.getData()[0] != 0){
+								errorMessage = "first byte of ACK is not 0";
+								System.out.println(errorMessage);
+							}else if(temp.getData()[1] != ACK){
+								errorMessage = "second byte of ACK is not ACK code '4'";
+								System.out.println(errorMessage);
+							}else{
+								errorMessage = "Block number is not matched";
+								System.out.println(errorMessage);
+							}
+							
+							System.arraycopy(errorMessage.getBytes(),0,error4,4,errorMessage.getBytes().length);
+							error4[4 + errorMessage.getBytes().length] = 0;
+							DatagramPacket errorPacket = new DatagramPacket(error4, error4.length,temp.getAddress(), temp.getPort());
+							System.out.println("the error 4 has been sent");								
+							sendReceiveSocket.send(errorPacket);
+							System.out.println("the error 4 has been sent and request is starting again");
+							return;
+						}
+					
+					
+				} catch (IOException e) {
+					e.printStackTrace();
+					System.out.println("Ack Reception Error");
+					System.exit(1);
+				}								
 				
 				bnum.increment();
 				
@@ -236,7 +336,7 @@ public class Client  {
 			    block = new DatagramPacket(pack,pack.length,InetAddress.getLocalHost(), this.sendPort);
 				sendReceiveSocket.send(block);
 				System.out.println("Sent data block");
-				
+
 			} while (n >= MESSAGE_SIZE);
 			
 			//closes input stream
@@ -265,6 +365,9 @@ public class Client  {
 			for(;;){
 				int length;
 				byte[] temp = getBlock(bnum.getCurrent());
+				if(temp == null) {
+					return;
+				}
 				for(length = 4; length < temp.length; length++) {
 					//System.out.print(temp[length]+","); // Used to check incoming byte array for debugging
 					if (temp[length] == 0) break;
@@ -315,10 +418,22 @@ public class Client  {
 		for(;;) {
 			
 			DatagramPacket temp = new DatagramPacket (msg, msg.length);
+			
 
 			try {
 				System.out.println("Waiting for packet on port: "+sendReceiveSocket.getLocalPort());
-				sendReceiveSocket.receive(temp);
+				sendReceiveSocket.setSoTimeout(TIMEOUT);
+				int count = 0;
+				for(;;) {
+					try {
+						sendReceiveSocket.receive(temp);
+						break;
+					} catch (SocketTimeoutException e) {
+						count ++;
+						if (count >= MAX_TIMEOUTS) return null;
+					}
+					
+				}
 				System.out.println("Block recieved");
 				if(this.sendPort==0) 
 					sendPort = temp.getPort();
@@ -343,22 +458,20 @@ public class Client  {
 					error5[4 + errorMessage.getBytes().length] = 0;
 					DatagramPacket errorPacket = new DatagramPacket(error5, error5.length,temp.getAddress(), temp.getPort());
 					sendReceiveSocket.send(errorPacket);
-					//waiting to receive the correct acknowledgment and repeats
-					//the loop if it is again from unknown port or IP.
-					sendReceiveSocket.receive(temp);
 				}
 				
 				while(temp.getData()[1] == ERROR){
 					if(temp.getData()[3] == 4){
+						System.out.println("Packet Error Message Recieved");
 						System.exit(1);
 					}else{
-						sendReceiveSocket.send(readpack);
-						System.out.println("sending the corrupted  block");
+						System.out.println("TIP Error Message Recieved");
 					}
+					System.exit(0);
 				}
 				byte blockNumCheck[] = new byte[2];
 				System.arraycopy(temp.getData(), 2, blockNumCheck, 0, 2);
-				if (temp.getData()[0] == 0 && temp.getData()[1] == DATA && bnum.compare(blockNumCheck)) {
+				if (temp.getData()[0] == 0 && temp.getData()[1] == DATA && bnum.lessThanOrEqualTo(blockNumCheck)) {
 					System.out.println("Data is good");
 					System.arraycopy(temp.getData(), 4,data, 0, temp.getLength()-4);
 					return data;
@@ -386,15 +499,10 @@ public class Client  {
 					error4[4 + errorMessage.getBytes().length] = 0;
 					DatagramPacket errorPacket = new DatagramPacket(error4, error4.length,temp.getAddress(), temp.getPort());
 					sendReceiveSocket.send(errorPacket);
-					System.out.println("the error 4 has been sent and request is starting again");
-					System.exit(1);
+				
+					System.out.println("the error 4 has been sent");			
+					return null;
 				}
-				/**for(int i = 0; i < 4; i ++) {
-					System.out.println("Byte "+i+": "+temp.getData()[i]);
-				}
-				System.out.println("Expecting: 0"+DATA+bnum.getCurrent()[0]+bnum.getCurrent()[1]);
-				System.out.println((temp.getData()[0] == 0)+" "+(temp.getData()[1] == DATA)+" "+(bnum.compare(blockNumCheck)));
-		        */
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.out.println("Error in getBlock");
@@ -402,6 +510,18 @@ public class Client  {
 			}
 		}
 	}
+	
+	    /**
+     * This method terminates the socket, disregards all errors and terminates.
+     * @param socket 
+     */
+    public void terminate() {
+        try {
+                sendReceiveSocket.close();
+        }catch(Exception e) {} 														//Lets ignore any error in socket closure.
+        System.out.println("System terminated succesfully");
+        System.exit(0);
+    }
 	
 	
 	

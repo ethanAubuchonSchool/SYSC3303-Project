@@ -85,7 +85,7 @@ public class TFTPSim {
 		for(;;) {
 				input = scanner.nextInt();
 			if(input==0) {
-				scanner.close();
+				this.error = new Error();
 				return;
 			}
 			if(input==4) {
@@ -261,16 +261,13 @@ public class TFTPSim {
 		}
 		
 		for(;;){
-			DatagramPacket packet = s.FormPacket();
 			if(s.mode==ON) {
 				System.out.println("Error mode setup:");
 				s.setupErrorMode(scanner);
 				
 			} else s.error = new Error();
-			TFTPSimManager thread = new TFTPSimManager(packet,s.error);
+			TFTPSimManager thread = new TFTPSimManager(s.FormPacket(),s.error);
 			Thread connect = new Thread (thread);
-			
-			
 	        connect.start();
 		}
 	}
