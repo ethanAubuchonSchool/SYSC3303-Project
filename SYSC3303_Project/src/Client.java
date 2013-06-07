@@ -11,7 +11,6 @@ public class Client  {
 	public static final byte DATA = 3;
 	public static final byte ACK = 4;
 	public static final byte ERROR = 5;
-	public static final String FILE_DIR = "ClientFiles/";
 
 	private String file;
 	private String mode;
@@ -54,7 +53,7 @@ public class Client  {
 	}
 
 	public void run(){
-			for(;;) {
+		for(;;) {
 			counter = 0;
 			msg = new byte[BUFFER_SIZE];
 			System.out.println("1) Read");
@@ -65,6 +64,22 @@ public class Client  {
 			int request = scanner.nextInt();
 			System.out.println("Type File name: ");
 			file = scanner.next();
+			
+			
+			//if writing the file to the server, check if the file actually exists
+			//if not, return to the main menu with error message
+			if(request == 2 && new File(file).exists() == false){
+				System.out.println(file + " cannot be found.");
+				continue;
+			}
+			
+			//if writing the file to the server, check if the file is allowed to be read
+			//if not, return to the menu with error message
+			if(request == 2 && new File(file).canRead() == false){
+				System.out.println("You do not have the proper read permission for " + file + " to write to server.");
+				continue;
+			}
+			
 			System.out.println("Type mode: ");
 			mode = scanner.next();
 			msg[0] = 0;
@@ -77,7 +92,7 @@ public class Client  {
 				scanner.close();
 				terminate();
 			}
-			else if (request == 2){
+			else if (request == 2 ){
 				msg[1] = 2;
 				System.arraycopy(file.getBytes(),0,msg,iterator,file.getBytes().length);
 				iterator+=file.getBytes().length;
@@ -106,7 +121,7 @@ public class Client  {
 		}
 	}
 	
-	public void sendData(int size, int reqt){  //add new para to  method reqt(r or w=1 or 2)
+	public void sendData(int size, int reqt){  //add new para to method reqt(r or w=1 or 2)
 		if(reqt==1){
 			received = false;
 			count=0;
@@ -129,19 +144,20 @@ public class Client  {
     				System.exit(1);
     			}
 		
-                try {
-                	sendReceiveSocket.setSoTimeout(TIMEOUT);
-                }catch (SocketException ex) {
-                	System.exit(1);
-                }//TIMEOUT=500 MS
-              
-                System.out.println("Waiting for response");
-                ack = new byte[BUFFER_SIZE];
-				DatagramPacket tem = new DatagramPacket (ack,ack.length );//makes new packet to receive ack from ser
+                    try {
+                    	sendReceiveSocket.setSoTimeout(TIMEOUT);
+                    }catch (SocketException ex) {
+                    	System.exit(1);
+                    }//TIMEOUT=500 MS
+                  
+                    System.out.println("Waiting for response");
+                    ack = new byte[BUFFER_SIZE];
+					DatagramPacket tem = new DatagramPacket (ack,ack.length );//makes new packet to receive ack from ser
 					
 				try {
-					sendReceiveSocket.receive(tem);
-					received = true;
+						sendReceiveSocket.receive(tem);
+
+                received = true;
                 } catch(SocketTimeoutException ste) {
                     count++;
 	                if(count >= MAX_TIMEOUTS) {   //TRY FOR THREE TIMES
@@ -154,7 +170,10 @@ public class Client  {
                 	System.exit(1);
                 }
             
-            }
+           }
+		
+            
+
 	        
 		}else if(reqt==2){       
 			received = false;
@@ -176,16 +195,22 @@ public class Client  {
 					System.out.println(e); 
 					System.exit(1); 
 				}	
-		}
+				}
+
 		
-	        System.out.println("Client: Packet sent.");
+		
+		/****************************************/
+		
+		
+
+
+	    System.out.println("Client: Packet sent.");
 	}
 	
 	public void clientWrite(){
-		
 		try {
 			//Opens an input stream
-			BufferedInputStream in = new BufferedInputStream(new FileInputStream(FILE_DIR+file));
+			BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
 			
 			bnum = new BlockNumber();
 			
@@ -349,22 +374,43 @@ public class Client  {
 		this.bnum.increment();	
 		
 		try {
-			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(FILE_DIR+file));
+			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file));
 			for(;;){
 				int length;
 				byte[] temp = getBlock(bnum.getCurrent());
 				if(temp == null) {
+					out.close();
 					return;
 				}
 				for(length = 4; length < temp.length; length++) {
 					//System.out.print(temp[length]+","); // Used to check incoming byte array for debugging
 					if (temp[length] == 0) break;
 				}
+				
+				//check the free space on current partition is less than the length of the received data
+				//if true, then there are not enough available space, therefore should throw an error and exit
+				if((int)(new File(file).getFreeSpace()) < length){
+					System.out.println("Need " + length + " bytes of free space, but current partition only has " + new File(file).getFreeSpace() + " bytes.");
+					System.out.println("Client will exit.");
+					
+					//send ERROR 3
+					//TO BE IMPLEMENTED
+					byte [] error3 = {(byte)0, (byte)5, (byte)0, (byte)3};
+					
+					DatagramPacket errorPacket = new DatagramPacket(error3, error3.length, InetAddress.getLocalHost(), sendPort);
+					sendReceiveSocket.send(errorPacket);
+										
+					//exit
+					out.close();
+					return;
+				}
+				
 				out.write(temp,0,length);
 				System.out.println("Sending ack");
 				sendAck(bnum.getCurrent());					
 				
 				System.out.println("length is: "+length);
+				
 				
 				if(length<MESSAGE_SIZE) {
 					out.close();
@@ -380,7 +426,6 @@ public class Client  {
 			return;
 		}
 	}
-	
 	
 	
 	private void sendAck(byte[] blockNumber) {
@@ -448,15 +493,30 @@ public class Client  {
 					sendReceiveSocket.send(errorPacket);
 				}
 				
-				while(temp.getData()[1] == ERROR){
+				
+				//checking error packets
+				if (temp.getData()[1] == ERROR){
 					if(temp.getData()[3] == 4){
-						System.out.println("Packet Error Message Recieved");
-						System.exit(1);
-					}else{
-						System.out.println("TIP Error Message Recieved");
+						System.out.println("Error 4: packet has formatting errors.");
+					} else if(temp.getData()[3] == 1){
+						System.out.println("Error 1: " + file + " cannot be found on the Server.");
+					} else if(temp.getData()[3] == 2){
+						System.out.println("Error 2: Server does not have permission to read " + file);
+					} else if(temp.getData()[3] == 3){
+						System.out.println("Error 3: Server has ran out of space. Transfer failed.");
+					} else if(temp.getData()[3] == 6){
+						System.out.println("Error 6: Cannot write " + file + " to Server. Server already has file with same name. Transfer failed.");
+					} else if(temp.getData()[3] == 5){
+						System.out.println("Error 5: TIP error Message Recieved");
+					} else {
+						System.out.println("Unknown error received.");
 					}
-					System.exit(0);
+					
+					return null;
 				}
+				
+				
+				
 				byte blockNumCheck[] = new byte[2];
 				System.arraycopy(temp.getData(), 2, blockNumCheck, 0, 2);
 				if (temp.getData()[0] == 0 && temp.getData()[1] == DATA && bnum.lessThanOrEqualTo(blockNumCheck)) {
