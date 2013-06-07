@@ -129,21 +129,19 @@ public class Client  {
     				System.exit(1);
     			}
 		
-                    try {
-                    	sendReceiveSocket.setSoTimeout(TIMEOUT);
-                    }catch (SocketException ex) {
-                    	System.exit(1);
-                    }//TIMEOUT=500 MS
-                  
-                    System.out.println("Waiting for response");
-                    ack = new byte[BUFFER_SIZE];
-					DatagramPacket tem = new DatagramPacket (ack,ack.length );//makes new packet to receive ack from ser
+                try {
+                	sendReceiveSocket.setSoTimeout(TIMEOUT);
+                }catch (SocketException ex) {
+                	System.exit(1);
+                }//TIMEOUT=500 MS
+              
+                System.out.println("Waiting for response");
+                ack = new byte[BUFFER_SIZE];
+				DatagramPacket tem = new DatagramPacket (ack,ack.length );//makes new packet to receive ack from ser
 					
 				try {
-						sendReceiveSocket.receive(tem);
-
-
-                received = true;
+					sendReceiveSocket.receive(tem);
+					received = true;
                 } catch(SocketTimeoutException ste) {
                     count++;
 	                if(count >= MAX_TIMEOUTS) {   //TRY FOR THREE TIMES
@@ -156,10 +154,7 @@ public class Client  {
                 	System.exit(1);
                 }
             
-           }
-		
-            
-
+            }
 	        
 		}else if(reqt==2){       
 			received = false;
@@ -181,15 +176,8 @@ public class Client  {
 					System.out.println(e); 
 					System.exit(1); 
 				}	
-				}
-
+		}
 		
-		
-		/****************************************/
-		
-		
-
-
 	        System.out.println("Client: Packet sent.");
 	}
 	

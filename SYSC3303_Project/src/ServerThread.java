@@ -330,6 +330,7 @@ public class ServerThread implements Runnable{
 					//Checks for proper Ack size	//**************************
 					received = true;
 				}catch(SocketTimeoutException ste) {
+					count++;
                     System.out.println("'SERVERTHREAD.JAVA' : Sending again to ip(TIMEOUT): " + ip);
 					System.out.println("'SERVERTHREAD.JAVA' : Sending again to port(TIMEOUT): " + port);
                     if(count >=MAX_TIMEOUTS) {
