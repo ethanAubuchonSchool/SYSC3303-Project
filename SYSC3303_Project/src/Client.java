@@ -1,6 +1,8 @@
 
 import java.io.*;
 import java.net.*;
+import java.security.AccessControlException;
+import java.security.AccessController;
 import java.util.Scanner;
 
 public class Client  {	
@@ -62,6 +64,12 @@ public class Client  {
 			System.out.println("Select a mode:");
 			Scanner scanner = new Scanner (System.in);
 			int request = scanner.nextInt();
+			
+			//check if user wants to exit
+			if(request == 3){
+				System.exit(0);
+			}
+			
 			System.out.println("Type File name: ");
 			file = scanner.next();
 			
@@ -75,11 +83,17 @@ public class Client  {
 			
 			//if writing the file to the server, check if the file is allowed to be read
 			//if not, return to the menu with error message
-			if(request == 2 && new File(file).canRead() == false){
-				System.out.println("You do not have the proper read permission for " + file + " to write to server.");
-				continue;
+			if(request == 2){
+				try{
+					BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
+					in.close();
+				} catch (Exception e){
+					System.out.println("You do not have the proper read permission for " + file + " to write to server.");
+					continue;
+				}
 			}
 			
+
 			System.out.println("Type mode: ");
 			mode = scanner.next();
 			msg[0] = 0;
