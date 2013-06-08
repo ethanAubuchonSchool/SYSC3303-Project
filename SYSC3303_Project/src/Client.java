@@ -15,6 +15,7 @@ public class Client  {
 	public static final byte ERROR = 5;
 
 	private String file;
+	private String dir;
 	private String mode;
 	private DatagramPacket sendPacket; //
 	private DatagramSocket sendReceiveSocket;
@@ -69,6 +70,18 @@ public class Client  {
 			if(request == 3){
 				System.exit(0);
 			}
+			System.out.println("Change directory? (y/n): ");
+			String temp = scanner.next();
+			if(temp.equals("y") || temp.equals("Y")) {
+				System.out.println("Enter directory (d for default): ");
+				temp = scanner.next();
+				if(temp.equals("d") || temp.equals("D")) {
+					this.dir = new String();
+				} else {
+					this.dir = temp;
+				}
+			}
+			
 			
 			System.out.println("Type File name: ");
 			file = scanner.next();
@@ -85,7 +98,7 @@ public class Client  {
 			//if not, return to the menu with error message
 			if(request == 2){
 				try{
-					BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
+					BufferedInputStream in = new BufferedInputStream(new FileInputStream(dir+file));
 					in.close();
 				} catch (Exception e){
 					System.out.println("You do not have the proper read permission for " + file + " to write to server.");
@@ -224,7 +237,7 @@ public class Client  {
 	public void clientWrite(){
 		try {
 			//Opens an input stream
-			BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
+			BufferedInputStream in = new BufferedInputStream(new FileInputStream(dir+file));
 			
 			bnum = new BlockNumber();
 			
@@ -290,16 +303,25 @@ public class Client  {
 					byte bn[] = new byte[2];
 					System.arraycopy(temp.getData(), 2, bn, 0, 2);
 					
-						while(temp.getData()[1] == ERROR){
-							if(temp.getData()[3] == 4){
-								System.out.println("Packet Error recieved");
-								return;
-							}else{
-								System.out.println("TIP Error recieved");
-								return;
-								
-							}
+					if (temp.getData()[1] == ERROR){
+						if(temp.getData()[3] == 4){
+							System.out.println("Error 4: packet has formatting errors.");
+						} else if(temp.getData()[3] == 1){
+							System.out.println("Error 1: " + file + " cannot be found on the Server.");
+						} else if(temp.getData()[3] == 2){
+							System.out.println("Error 2: Server does not have permission to read " + file);
+						} else if(temp.getData()[3] == 3){
+							System.out.println("Error 3: Server has ran out of space. Transfer failed.");
+						} else if(temp.getData()[3] == 6){
+							System.out.println("Error 6: Cannot write " + file + " to Server. Server already has file with same name. Transfer failed.");
+						} else if(temp.getData()[3] == 5){
+							System.out.println("Error 5: TIP error Message Recieved");
+						} else {
+							System.out.println("Unknown error received.");
 						}
+						
+						return;
+					}
 					
 					
 						if(temp.getData()[0] == 0 && temp.getData()[1] == ACK && bnum.lessThanOrEqualTo(bn)) {
@@ -388,7 +410,7 @@ public class Client  {
 		this.bnum.increment();	
 		
 		try {
-			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file));
+			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(dir+file));
 			for(;;){
 				int length;
 				byte[] temp = getBlock(bnum.getCurrent());
@@ -403,8 +425,8 @@ public class Client  {
 				
 				//check the free space on current partition is less than the length of the received data
 				//if true, then there are not enough available space, therefore should throw an error and exit
-				if((int)(new File(file).getFreeSpace()) < length){
-					System.out.println("Need " + length + " bytes of free space, but current partition only has " + new File(file).getFreeSpace() + " bytes.");
+				if((int)(new File(dir+file).getFreeSpace()) < length){
+					System.out.println("Need " + length + " bytes of free space, but current partition only has " + new File(dir+file).getFreeSpace() + " bytes.");
 					System.out.println("Client will exit.");
 					
 					//send ERROR 3
@@ -419,7 +441,22 @@ public class Client  {
 					return;
 				}
 				
-				out.write(temp,0,length);
+				try {
+					out.write(temp,0,length);
+				}catch(IOException e) {
+					String message = "File too large";
+					System.out.println(message);
+					byte data[] = new byte[4+message.getBytes().length+1];
+					data[0] = 0;
+					data[1] = 5;
+					data[2] = 0;
+					data[3] = 1;
+					System.arraycopy(message.getBytes(), 0, data, 4, message.getBytes().length);
+					data[data.length-1] = 0;
+					this.sendReceiveSocket.send(new DatagramPacket(data,data.length,InetAddress.getLocalHost(),this.sendPort));
+					out.close();
+					return;
+				}
 				System.out.println("Sending ack");
 				sendAck(bnum.getCurrent());					
 				
@@ -476,8 +513,12 @@ public class Client  {
 						sendReceiveSocket.receive(temp);
 						break;
 					} catch (SocketTimeoutException e) {
+						System.out.println("Timeout #"+count);
 						count ++;
-						if (count >= MAX_TIMEOUTS) return null;
+						if (count >= MAX_TIMEOUTS) {
+							System.out.println("Connection lost.  Closing transfer.");
+							return null;
+						}
 					}
 					
 				}

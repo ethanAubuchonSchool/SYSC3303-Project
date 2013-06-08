@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.net.*;
+import java.util.Scanner;
 
 //import javax.swing.*;
 
@@ -7,7 +8,8 @@ import java.net.*;
 public class Server {
 	public static final int WELL_KNOWN_PORT = 69;
 	public static final int BUFFER_SIZE = 512+4;
-		private boolean acceptIncoming;
+	private boolean acceptIncoming;
+	private String directory;
 	
 	
 
@@ -22,8 +24,6 @@ public class Server {
 		try {
 			wellKnown = new DatagramSocket(WELL_KNOWN_PORT);
 			this.acceptIncoming = true;
-		
-			(new Thread(new ServerEx(this))).start(); 	
 		} catch (SocketException e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -44,10 +44,21 @@ public class Server {
 		return incomingPacket;
 	}
 	
+	public void setDir(String s) {
+		this.directory = s;
+	}
+	
 	public static void main(String [] args) {
 		Server s = new Server();
+		Scanner in = new Scanner(System.in);
+		
+		System.out.println("Please enter a directory (blank for default): ");
+		s.setDir(in.nextLine());
+				
+		(new Thread(new ServerEx(s))).start();
+		
 		for(;;) {
-			Thread st = new Thread(new ServerThread(s.recieveTFTP()));
+			Thread st = new Thread(new ServerThread(s.recieveTFTP(), s.directory));
 			st.start();
 		}
 	}

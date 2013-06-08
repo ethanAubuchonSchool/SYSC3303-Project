@@ -92,7 +92,11 @@ public class TFTPSimManager  implements Runnable
 			System.out.println("Forwarded packet to server");
 			//Checks if that was the last packet
 			//If so, thread ends
-			if(checkForEnd(outgoingPacket.getData()))return;
+			if(checkForEnd(outgoingPacket.getData()))
+			{
+				System.out.println("Closing simulator thread");
+				return;
+			}
 			
 			//Loops until thread ends 
 			for(;;) {
@@ -101,15 +105,6 @@ public class TFTPSimManager  implements Runnable
 				//it then returns true if it was the final packet
 				if(forwardPacket()) 
 				{
-					//Prints out menu again for convenience of the user
-					System.out.println("Which type of error do you wish to generate? (select by number):");
-					System.out.println("0) No Error");
-					System.out.println("4) Packet Error");
-					System.out.println("5) TID Error");
-					System.out.println("8) Delayed Packet");
-					System.out.println("9) Deleted Packet");
-					System.out.println("10) Duplicated Packet");
-					System.out.println("Choose: ");
 					return;//thread closes
 				}
 			}
@@ -138,7 +133,11 @@ public class TFTPSimManager  implements Runnable
 					return false;
 				}
 			}
-		} else if(data[0]==0 && data[1]==ACK && exitNext) return true;
+		} else if(data[0]==0 && data[1]==ACK && exitNext) {
+			return true;
+		} else if(data[0]==0 && data[1]==5) {
+			return true;
+		}
 	  
 		return false;
 	}
