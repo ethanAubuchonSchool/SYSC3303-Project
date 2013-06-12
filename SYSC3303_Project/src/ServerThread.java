@@ -245,6 +245,21 @@ public class ServerThread implements Runnable{
 	private void handleRead() {
 		try {
 			//Opens an input stream
+			if(new File(file).exists() == false){
+				byte errornum = 1;
+				DatagramPacket err = FormError.IOerror("FILE NOT FOUND",errornum);
+				err.setAddress(request.getAddress());
+				err.setPort(port);			   
+				try {			   
+					socket.send(err);			   
+				} catch (IOException ex) {			   
+					ex.printStackTrace();			   
+					System.exit(1);			   
+				}			   
+				socket.close();			   
+				//System.out.println("File not found to read");			   
+				return;
+			}
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
 			BlockNumber bn = new BlockNumber();
 			
@@ -322,21 +337,7 @@ public class ServerThread implements Runnable{
 
 			//closes input stream
 			in.close();
-		} catch (FileNotFoundException e) {			
-			byte errornum = 1;
-			DatagramPacket err = FormError.IOerror("FILE NOT FOUND",errornum);
-			err.setAddress(request.getAddress());
-			err.setPort(port);			   
-			try {			   
-				socket.send(err);			   
-			} catch (IOException ex) {			   
-				ex.printStackTrace();			   
-				System.exit(1);			   
-			}			   
-			socket.close();			   
-			//System.out.println("File not found to read");			   
-			return;
-		} catch(SecurityException e){			
+		} catch (FileNotFoundException e) {						
 			byte errornum = 2;
 			DatagramPacket err = FormError.IOerror("NO ACCESS TO READ",errornum);
 			err.setAddress(request.getAddress());

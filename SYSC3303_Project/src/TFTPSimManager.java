@@ -176,7 +176,10 @@ public class TFTPSimManager  implements Runnable
 				//Packs and forwards data
 				outgoingPacket = new DatagramPacket(temp,temp.length,InetAddress.getLocalHost(),outgoingPort);
 				socket.send(outgoingPacket);
-				System.out.println("Forwarded packet");
+				System.out.print("Forwarded packet to ");
+				if(outgoingPacket.getPort()==this.clientPort) System.out.println("client port: "+outgoingPacket.getPort());
+				else if(outgoingPacket.getPort()==this.serverPort) System.out.println("server port: "+outgoingPacket.getPort());
+				else System.out.println("unknown");
 			}
 			//returns whether or not the end has been reached
 			return checkForEnd(incomingPacket.getData());

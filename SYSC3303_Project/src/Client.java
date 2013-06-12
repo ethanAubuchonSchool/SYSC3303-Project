@@ -1,8 +1,6 @@
 
 import java.io.*;
 import java.net.*;
-import java.security.AccessControlException;
-import java.security.AccessController;
 import java.util.Scanner;
 
 public class Client  {	
@@ -30,7 +28,7 @@ public class Client  {
 	private byte ack[];
 
 	private int count=0;
-	private int TIMEOUT = 500;	
+	private int TIMEOUT = 1000;	
 	int MAX_TIMEOUTS = 3;														//Maximum timeouts before abort
 	private boolean received;   
     //private boolean ex; 	//to terminate
@@ -80,12 +78,14 @@ public class Client  {
 				} else {
 					this.dir = temp;
 				}
+			} else {
+				this.dir = new String();
 			}
 			
 			
 			System.out.println("Type File name: ");
 			file = scanner.next();
-			
+			dir+=file;
 			
 			//if writing the file to the server, check if the file actually exists
 			//if not, return to the main menu with error message
@@ -98,7 +98,7 @@ public class Client  {
 			//if not, return to the menu with error message
 			if(request == 2){
 				try{
-					BufferedInputStream in = new BufferedInputStream(new FileInputStream(dir+file));
+					BufferedInputStream in = new BufferedInputStream(new FileInputStream(dir));
 					in.close();
 				} catch (Exception e){
 					System.out.println("You do not have the proper read permission for " + file + " to write to server.");
@@ -237,7 +237,7 @@ public class Client  {
 	public void clientWrite(){
 		try {
 			//Opens an input stream
-			BufferedInputStream in = new BufferedInputStream(new FileInputStream(dir+file));
+			BufferedInputStream in = new BufferedInputStream(new FileInputStream(dir));
 			
 			bnum = new BlockNumber();
 			
@@ -410,7 +410,7 @@ public class Client  {
 		this.bnum.increment();	
 		
 		try {
-			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(dir+file));
+			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(dir));
 			for(;;){
 				int length;
 				byte[] temp = getBlock(bnum.getCurrent());
@@ -425,8 +425,8 @@ public class Client  {
 				
 				//check the free space on current partition is less than the length of the received data
 				//if true, then there are not enough available space, therefore should throw an error and exit
-				if((int)(new File(dir+file).getFreeSpace()) < length){
-					System.out.println("Need " + length + " bytes of free space, but current partition only has " + new File(dir+file).getFreeSpace() + " bytes.");
+				if((int)(new File(dir).getFreeSpace()) < length){
+					System.out.println("Need " + length + " bytes of free space, but current partition only has " + new File(dir).getFreeSpace() + " bytes.");
 					System.out.println("Client will exit.");
 					
 					//send ERROR 3
@@ -435,7 +435,8 @@ public class Client  {
 					
 					DatagramPacket errorPacket = new DatagramPacket(error3, error3.length, InetAddress.getLocalHost(), sendPort);
 					sendReceiveSocket.send(errorPacket);
-										
+					
+					System.out.println("Transfer complete");
 					//exit
 					out.close();
 					return;
@@ -506,11 +507,14 @@ public class Client  {
 
 			try {
 				System.out.println("Waiting for packet on port: "+sendReceiveSocket.getLocalPort());
-				sendReceiveSocket.setSoTimeout(TIMEOUT);
+				
 				int count = 0;
 				for(;;) {
+					sendReceiveSocket.setSoTimeout(TIMEOUT);
 					try {
+						System.out.println("Waiting on port "+this.sendReceiveSocket.getLocalPort());
 						sendReceiveSocket.receive(temp);
+						System.out.println("Recieved");
 						break;
 					} catch (SocketTimeoutException e) {
 						System.out.println("Timeout #"+count);
