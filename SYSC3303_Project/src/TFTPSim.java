@@ -168,8 +168,9 @@ public class TFTPSim {
 			System.out.println("3) No File Name");
 			System.out.println("4) No Zero After Filename");
 			System.out.println("5) No Mode");
-			System.out.println("6) No Zero After Mode");
-			System.out.println("7) Data After Zero");
+			System.out.println("6) Invalid Mode");
+			System.out.println("7) No Zero After Mode");
+			System.out.println("8) Data After Zero");
 			
 			for(;;) {
 				this.errorDetail = scanner.nextInt();

@@ -11,6 +11,8 @@ public class ServerThread implements Runnable{
 	public static final byte MAX_BLOCK_NUM = 127;
 	public static final byte DATA = 3;
 	public static final byte ACK = 4;
+	public static final int TIMEOUT = 500;
+	public static final int MAX_TIMEOUTS = 3;
 	private String dir;
 	private String[] PACKETTYPES = {"RRQ", "WRQ", "DATA", "ACK", "ERROR"}; // used for nice error string printing
 	private DatagramPacket request;
@@ -21,8 +23,7 @@ public class ServerThread implements Runnable{
 	private String mode;
 	private Request requestType;
 	private int ackCount;
-	private int TIMEOUT = 500;	
-	int MAX_TIMEOUTS = 3;
+	
 
 	/**
 	 * Constructor for ServerThread
@@ -38,12 +39,7 @@ public class ServerThread implements Runnable{
 		System.out.println("Directory: "+dir);
 		this.request = request;
 		this.ackCount = 0;
-		try {
-		this.ip = InetAddress.getLocalHost();
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		this.ip = request.getAddress();
 	}
 
 	
@@ -312,7 +308,7 @@ public class ServerThread implements Runnable{
 				}
 
 				try {
-					if(temp.getPort() != request.getPort()){
+					if(temp.getPort() != port || temp.getAddress() != ip){
 						DatagramPacket err = FormError.unknownTransferID("Unkown client.");
 						err.setPort(temp.getPort());
 						err.setAddress(temp.getAddress());
@@ -413,7 +409,7 @@ public class ServerThread implements Runnable{
 			
 			try {
 
-				if(port!=temp.getPort()){
+				if(port != temp.getPort() || ip != temp.getAddress()){
 					DatagramPacket err = FormError.unknownTransferID("Unkown client.");
 					err.setPort(temp.getPort());
 					err.setAddress(temp.getAddress());

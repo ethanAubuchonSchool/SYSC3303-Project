@@ -26,11 +26,11 @@ public class TFTPSimManager  implements Runnable
 	private DatagramSocket socket;
 	private boolean exitNext;
 	private int clientPort,serverPort;
+	private InetAddress clientIP, serverIP;
 	
 	//Data for error generation
 	private int errorType;
 	private byte[] comparitorA;
-	private byte[] comparitorB;
 	private int errorDetail;
 	private byte packetType;
 
@@ -39,28 +39,28 @@ public class TFTPSimManager  implements Runnable
 	  	// Get a reference to the data inside the received datagram.
 	    incomingPacket = dp;
 	    serverPort = 69;
+	    try {
+			serverIP = InetAddress.getLocalHost();
+		} catch (UnknownHostException e1) {
+			System.out.println("IP error.");
+			System.exit(1);
+		}
+	    clientIP = dp.getAddress();
 	    exitNext = false;
 	    
 	    //Comparitor is used to check for block numbers and op codes
 	    //Because a request error can check for read or write request
 	    //two comparitors are needed
 	    this.comparitorA = new byte[4];
-	    this.comparitorB = new byte[4];
 	    this.comparitorA[0] = 0;
 	    this.comparitorA[1] = e.getBlockType();
 	    this.comparitorA[2] = e.getBlockNumber().getCurrent()[0];
 	    this.comparitorA[3] = e.getBlockNumber().getCurrent()[1];
-	    this.comparitorB = this.comparitorA;
 	    //If error is to be made in REQ packet then comparitorA is set to RRQ and comparitorB is set to WRQ
-	    if (this.comparitorA[1] == 3) {
-	    	this.comparitorA[1] = 1;
-	    	this.comparitorB[1] = 2;
-	    } else if (this.comparitorA[1] == 1) {//Both comparitors are set to DATA
+	    if (this.comparitorA[1] == 1) {//Both comparitors are set to DATA
 	    	this.comparitorA[1] = 3;
-	    	this.comparitorB[1] = 3;
 	    } else if (this.comparitorA[1] == 2) {//Both comparitors are set to ACK
 	    	this.comparitorA[1] = 4;
-	    	this.comparitorB[1] = 4;
 	    }
 	    //Sets error values
 	    this.errorType = e.getErrorType();
@@ -77,14 +77,14 @@ public class TFTPSimManager  implements Runnable
 			
 			//Checks if this is the block that the user requested an error in
 			//If so it creates the error and returns a data array
-			temp = findRequestError(outgoingPacket = new DatagramPacket(incomingPacket.getData(),incomingPacket.getLength(),InetAddress.getLocalHost(),serverPort));
+			temp = findError(outgoingPacket = new DatagramPacket(incomingPacket.getData(),incomingPacket.getLength(),serverIP,serverPort));
 			
 			//Prints out data contents
 			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
 			System.out.println();
 			
 			//Forms outgoing packet with data array from error generator
-			outgoingPacket = new DatagramPacket(temp,temp.length,InetAddress.getLocalHost(),serverPort);
+			outgoingPacket = new DatagramPacket(temp,temp.length,serverIP,serverPort);
 			System.out.println("Recieved Packet from client");
 			socket = new DatagramSocket();
 			//Sends data to server
@@ -95,6 +95,15 @@ public class TFTPSimManager  implements Runnable
 			if(checkForEnd(outgoingPacket.getData()))
 			{
 				System.out.println("Closing simulator thread");
+				System.out.println("Select type of error you wish to generate in the request packet:");
+				System.out.println("1) No Starting Zero");
+				System.out.println("2) Invalid Op Code");
+				System.out.println("3) No File Name");
+				System.out.println("4) No Zero After Filename");
+				System.out.println("5) No Mode");
+				System.out.println("6) Invalid Mode");
+				System.out.println("7) No Zero After Mode");
+				System.out.println("8) Data After Zero");
 				return;
 			}
 			
@@ -105,6 +114,16 @@ public class TFTPSimManager  implements Runnable
 				//it then returns true if it was the final packet
 				if(forwardPacket()) 
 				{
+					System.out.println("Closing simulator thread");
+					System.out.println("Select type of error you wish to generate in the request packet:");
+					System.out.println("1) No Starting Zero");
+					System.out.println("2) Invalid Op Code");
+					System.out.println("3) No File Name");
+					System.out.println("4) No Zero After Filename");
+					System.out.println("5) No Mode");
+					System.out.println("6) Invalid Mode");
+					System.out.println("7) No Zero After Mode");
+					System.out.println("8) Data After Zero");
 					return;//thread closes
 				}
 			}
@@ -145,6 +164,7 @@ public class TFTPSimManager  implements Runnable
 	private boolean forwardPacket() {
 		byte data[] = new byte[BUFFER_SIZE];
 		int outgoingPort;
+		InetAddress outgoingIP;
 		try {
 			//Recieves a packet
 			incomingPacket = new DatagramPacket(data,BUFFER_SIZE,InetAddress.getLocalHost(),clientPort);
@@ -153,19 +173,22 @@ public class TFTPSimManager  implements Runnable
 			if(incomingPacket.getPort()==this.clientPort) {
 				System.out.println("Recieved packet from client");
 				outgoingPort = this.serverPort;
+				outgoingIP = this.serverIP;
 			//If it is from the server or an unknown port before the server port is set it is sent to the client
 			} else if (this.serverPort == 69 || incomingPacket.getPort()==this.serverPort) {
 				if (this.serverPort == 69) this.serverPort = incomingPacket.getPort();
 				System.out.println("Recieved packet from server");
 				outgoingPort = this.clientPort;
+				outgoingIP = this.clientIP;
 			} else {//TIP error
 				System.out.println("Error with port number");
 				System.exit(1);
 				outgoingPort = 0; // Won't be reached but is used to stop errors in eclipse
+				outgoingIP = this.serverIP;
 			}
 			//Checks if an error needs to be made
 			//returns appropriate byte array
-			byte temp[] = findError(outgoingPacket = new DatagramPacket(incomingPacket.getData(),incomingPacket.getLength(),InetAddress.getLocalHost(),outgoingPort));
+			byte temp[] = findError(outgoingPacket = new DatagramPacket(incomingPacket.getData(),incomingPacket.getLength(),outgoingIP,outgoingPort));
 			//if temp is null, pack is "deleted" and no message is sent
 			if(temp == null) {
 				System.out.println("Packet Deleted");
@@ -174,7 +197,7 @@ public class TFTPSimManager  implements Runnable
 				for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
 				System.out.println();
 				//Packs and forwards data
-				outgoingPacket = new DatagramPacket(temp,temp.length,InetAddress.getLocalHost(),outgoingPort);
+				outgoingPacket = new DatagramPacket(temp,temp.length,outgoingIP,outgoingPort);
 				socket.send(outgoingPacket);
 				System.out.print("Forwarded packet to ");
 				if(outgoingPacket.getPort()==this.clientPort) System.out.println("client port: "+outgoingPacket.getPort());
@@ -195,13 +218,6 @@ public class TFTPSimManager  implements Runnable
 		//Used to suppress eclipse compile errors
 		return false; 	
 	}
-
-	//finds if a request should get an error inserted
-	//if so error is made and returned
-	private byte[] findRequestError(DatagramPacket packet) {
-		if(packet.getData()[0]==0 && packet.getData()[1]==this.packetType);
-		return packet.getData();
-	}
 	
 	//finds if error packet is needed
 	//if so, returns error data
@@ -209,10 +225,15 @@ public class TFTPSimManager  implements Runnable
 	private byte[] findError(DatagramPacket packet) {
 		byte temp[] = new byte[2];
 		System.arraycopy(packet.getData(), 2, temp, 0, 2);
-		for (int i = 0; i < 4; i++) {
-			if(packet.getData()[i] != this.comparitorA[i] || packet.getData()[i] != this.comparitorB[i]) return packet.getData();
+		if(this.packetType == 1 || this.packetType == 2) {
+			for (int i = 0; i < 4; i++) {
+				if(packet.getData()[i] != this.comparitorA[i]) return packet.getData();
+			}
+			return makeError(packet);
+		} else if (this.packetType == 3) {
+			if(packet.getData()[0]==0 && (packet.getData()[1]==1 || packet.getData()[1]==2)) return makeError(packet);
 		}
-		return makeError(packet);
+		return packet.getData();
 	}
 	
 	//Causes the error
@@ -261,7 +282,18 @@ public class TFTPSimManager  implements Runnable
 						block = temp;
 						break;
 						
-					case 6: //no closing zero
+					case 6: // change mode
+						for(i = 1; i < block.length; i++) {
+							if (block[i] == 0) break;
+						}
+						String fake = new String("fake");
+						byte fakeMode[] = new byte[i + fake.getBytes().length + 2];
+						System.arraycopy(fake.getBytes(), 0, fakeMode, i+1, fake.getBytes().length);
+						fakeMode[fakeMode.length-1] = 0;
+						block = fakeMode;
+						break;
+						
+					case 7: //no closing zero
 						set = false;
 						for(i = 4; i < block.length; i++) {
 							if (block[i]==0) {
@@ -274,7 +306,7 @@ public class TFTPSimManager  implements Runnable
 						block = temp;
 						break;
 						
-					case 7: //data after closing zero
+					case 8: //data after closing zero
 						set = false;
 						for(i = 4; i < block.length; i++) {
 							if (block[i]==0) {
@@ -414,12 +446,10 @@ public class TFTPSimManager  implements Runnable
 					System.exit(1);
 				}
 				this.comparitorA = new byte[4];//resets the comparitors so error wont happen again on a resent packet
-			    this.comparitorB = new byte[4];
 				return packet.getData();
 			} else if (this.errorDetail == DELETE) {
 				//deletes packet
 				this.comparitorA = new byte[4];//resets the comparitors so error wont happen again on a resent packet
-			    this.comparitorB = new byte[4];
 				return null;
 			} else if (this.errorDetail == DUPLICATE) {
 				//sends a duplicate packet
@@ -434,7 +464,6 @@ public class TFTPSimManager  implements Runnable
 					System.exit(1);
 				}
 				this.comparitorA = new byte[4];//resets the comparitors so error wont happen again on a resent packet
-			    this.comparitorB = new byte[4];
 				return packet.getData();
 			}
 		} else {
