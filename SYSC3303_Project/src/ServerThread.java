@@ -308,7 +308,7 @@ public class ServerThread implements Runnable{
 				}
 
 				try {
-					if(temp.getPort() != port || temp.getAddress() != ip){
+					if(temp.getPort() != port || !temp.getAddress().equals(ip)){
 						DatagramPacket err = FormError.unknownTransferID("Unkown client.");
 						err.setPort(temp.getPort());
 						err.setAddress(temp.getAddress());
@@ -317,7 +317,7 @@ public class ServerThread implements Runnable{
 						continue;
 					}
 					if(!checkForErrors(temp, 4, socket)){
-						System.out.println("");
+						System.out.println();
 						in.close();
 						return;
 					}
@@ -409,7 +409,7 @@ public class ServerThread implements Runnable{
 			
 			try {
 
-				if(port != temp.getPort() || ip != temp.getAddress()){
+				if(port != temp.getPort() || !temp.getAddress().equals(ip)){
 					DatagramPacket err = FormError.unknownTransferID("Unkown client.");
 					err.setPort(temp.getPort());
 					err.setAddress(temp.getAddress());
@@ -618,6 +618,7 @@ public class ServerThread implements Runnable{
 	@Override
 	public void run() {
 		processRequest();
+		System.out.println("Thread closing");
 	}
 }
 

@@ -58,8 +58,6 @@ public class Client  {
 		Scanner scanner = new Scanner (System.in);
 		for(;;){
 			System.out.println("Do you wish to use the error simulator? (y/n)");
-			System.out.println("1) Yes");
-			System.out.println("2) No");
 			String temp = scanner.next();
 			if(temp.equals("y") || temp.equals("Y")) {
 				this.wellKnownPort = SIM_PORT;
@@ -251,7 +249,7 @@ public class Client  {
 						this.sendPort = temp.getPort();
 					}
 					
-					if (sendPort != temp.getPort() || serverIP != temp.getAddress()){  // checking for error 5
+					if (sendPort != temp.getPort() || !serverIP.equals(temp.getAddress())){  // checking for error 5
 						byte[] error5 = new byte[BUFFER_SIZE];
 						error5[0] = 0;
 						error5[1] = ERROR;
@@ -405,8 +403,9 @@ public class Client  {
 				
 				//check the free space on current partition is less than the length of the received data
 				//if true, then there are not enough available space, therefore should throw an error and exit
-				if((int)(new File(dir).getFreeSpace()) < length){
-					System.out.println("Need " + length + " bytes of free space, but current partition only has " + new File(dir).getFreeSpace() + " bytes.");
+				long partition = (new File(dir).getFreeSpace());
+				if(partition < (long)length){
+					System.out.println("Need " + length + " bytes of free space, but current partition only has " + partition + " bytes.");
 					System.out.println("Client will exit.");
 					
 					//send ERROR 3
@@ -514,7 +513,7 @@ public class Client  {
 				if(this.sendPort==0) 
 					sendPort = temp.getPort();
 				
-				if (sendPort != temp.getPort() || serverIP != temp.getAddress()){  // checking for error 5
+				if (sendPort != temp.getPort() || !serverIP.equals(temp.getAddress())){  // checking for error 5
 					byte[] error5 = new byte[BUFFER_SIZE];
 					error5[0] = 0;
 					error5[1] = ERROR;
