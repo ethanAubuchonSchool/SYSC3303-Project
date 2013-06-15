@@ -290,6 +290,7 @@ public class TFTPSimManager  implements Runnable
 						String fake = new String("fake");
 						byte fakeMode[] = new byte[i + fake.getBytes().length + 2];
 						System.arraycopy(fake.getBytes(), 0, fakeMode, i+1, fake.getBytes().length);
+						System.arraycopy(block, 0, fakeMode, 0, i);
 						fakeMode[fakeMode.length-1] = 0;
 						block = fakeMode;
 						break;

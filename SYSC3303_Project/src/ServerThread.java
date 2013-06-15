@@ -144,6 +144,7 @@ public class ServerThread implements Runnable{
 	        socket.close();
 	        return;
 		} else if(data[2]<=0) {
+			requestType = Request.ERROR;
 			DatagramPacket err = FormError.illegalTFTP("Missing File name." + request.getData()[2]);
 	        err.setAddress(request.getAddress());
 	        err.setPort(request.getPort());
@@ -473,6 +474,8 @@ public class ServerThread implements Runnable{
 				long partition = (new File(file).getFreeSpace()) ;
 				if(partition < (long)temp.length){
 					byte errornum = 3;
+					out.close();
+					new File(file).delete();
 					DatagramPacket err = FormError.IOerror("No SPACE on the disk",errornum);
 					err.setAddress(request.getAddress());
 					err.setPort(port);					   
@@ -675,8 +678,7 @@ class FormError {
 		data = FormStart(data, msg, (byte)4);
 		
 		DatagramPacket packet = new DatagramPacket(data, data.length);
-		String m=new String(packet.getData());
-		System.out.println(m);
+		System.out.println(errorMsg);
 		return packet;
 	}
 	
@@ -692,8 +694,7 @@ class FormError {
 		byte[] data = new byte[msg.length + 5];            
 		data = FormStart(data, msg, num);
 		DatagramPacket packet = new DatagramPacket(data, data.length);
-		String m=new String(packet.getData());
-		System.out.println(m);
+		System.out.println(errorMsg);
 		return packet;
 	}
 	
