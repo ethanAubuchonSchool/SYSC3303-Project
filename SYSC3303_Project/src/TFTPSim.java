@@ -194,12 +194,13 @@ public class TFTPSim {
 		System.out.println("Select type of error you wish to generate in the data packet:");
 		System.out.println("1) No Starting Zero");
 		System.out.println("2) Invalid Op Code");
-		System.out.println("3) Invalid Block Number");
+		System.out.println("3) Block Number Too High");
+		System.out.println("4) Block Number Too Low");
 		
 		if (this.packetType == DATA) {
-			System.out.println("4) Too Much Data");
+			System.out.println("5) Too Much Data");
 		} else if (this.packetType == ACK) {
-			System.out.println("4) Add Data to ACK");
+			System.out.println("5) Add Data to ACK");
 		}
 		for(;;) {
 			this.errorDetail = scanner.nextInt();
@@ -244,29 +245,10 @@ public class TFTPSim {
 	{
 		TFTPSim s = new TFTPSim();
 		Scanner scanner = new Scanner (System.in);
-		String input;
-		
-		for(;;) {
-			System.out.println("Do you wish to use the simulator? (y/n):");
-			input = scanner.next();
-
-			if(input.equals("y")||input.equals("Y")) {
-				s.mode = ON;
-				System.out.println("Error mode on");
-				break;
-			} else if(input.equals("n")||input.equals("N")) {
-				s.mode = OFF;
-				break;
-			}
-			System.out.println("Invalid option.  Please try again:");
-		}
 		
 		for(;;){
-			if(s.mode==ON) {
-				System.out.println("Error mode setup:");
-				s.setupErrorMode(scanner);
-				
-			} else s.error = new Error();
+			System.out.println("Error mode setup:");
+			s.setupErrorMode(scanner);
 			TFTPSimManager thread = new TFTPSimManager(s.FormPacket(),s.error);
 			Thread connect = new Thread (thread);
 	        connect.start();

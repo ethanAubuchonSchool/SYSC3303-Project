@@ -245,6 +245,7 @@ public class TFTPSimManager  implements Runnable
 		if (this.errorType == PACKET) { // Generates a packet error
 			System.arraycopy(packet.getData(), 0, block, 0, packet.getLength());
 			byte temp[];
+			BlockNumber bn;
 			if(this.packetType == REQ) {
 				int i;
 				boolean set;
@@ -338,14 +339,21 @@ public class TFTPSimManager  implements Runnable
 						block[1]++;
 						break;
 						
-					case 3://invalid block number
+					case 3://block number too large
 						temp = new byte[2];
 						System.arraycopy(block, 2, temp, 0, 2);
-						BlockNumber bn = new BlockNumber(temp);
+						bn = new BlockNumber(temp);
 						System.arraycopy(bn.getNext(), 0, block, 2, 2);
 						break;
 						
-					case 4://no data
+					case 4://block bumber too small
+						temp = new byte[2];
+						System.arraycopy(block, 2, temp, 0, 2);
+						bn = new BlockNumber();
+						System.arraycopy(bn.getNext(), 0, block, 2, 2);
+						break;
+						
+					case 5://no data
 						temp = new byte[BUFFER_SIZE + 3];
 						temp[BUFFER_SIZE] = 1;
 						temp[BUFFER_SIZE+1] = 1;
@@ -369,14 +377,21 @@ public class TFTPSimManager  implements Runnable
 						block[1]=-3;
 						break;
 						
-					case 3:// invalid block number
+					case 3:// block number too large
 						temp = new byte[2];
 						System.arraycopy(block, 2, temp, 0, 2);
-						BlockNumber bn = new BlockNumber(temp);
+						bn = new BlockNumber(temp);
 						System.arraycopy(bn.getNext(), 0, block, 2, 2);
 						break;
 						
-					case 4:// data after block number
+					case 4://block bumber too small
+						temp = new byte[2];
+						System.arraycopy(block, 2, temp, 0, 2);
+						bn = new BlockNumber();
+						System.arraycopy(bn.getNext(), 0, block, 2, 2);
+						break;
+						
+					case 5:// data after block number
 						temp = new byte[7];
 						temp[4] = 1;
 						temp[5] = 1;

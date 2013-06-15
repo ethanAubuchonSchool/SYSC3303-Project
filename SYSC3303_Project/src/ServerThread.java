@@ -470,7 +470,8 @@ public class ServerThread implements Runnable{
 				byte[] temp = getBlock(bn,out);
 				if(temp == null) return;
 
-				if((int)(new File(file).getFreeSpace()) < temp.length){
+				long partition = (new File(file).getFreeSpace()) ;
+				if(partition < (long)temp.length){
 					byte errornum = 3;
 					DatagramPacket err = FormError.IOerror("No SPACE on the disk",errornum);
 					err.setAddress(request.getAddress());
