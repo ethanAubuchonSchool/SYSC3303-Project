@@ -94,143 +94,156 @@ public class ServerThread implements Runnable{
 	 * Parses request DatagramPacket and populates instance variables with data
 	 */
 	private void parseRequest() {
-		int length  = this.request.getLength(); //temporarily stores length of request data
-		byte data[] = this.request.getData(); //copies data from request
-		this.ip = this.request.getAddress(); //stores ip address in instance variable
-		this.port = this.request.getPort(); //stores port number in instance variable
-		//File here;
-		try {
-			socket=new DatagramSocket();
-		} catch (SocketException se) {   // Can't create the socket.
-			se.printStackTrace();
-			System.exit(1);
-		}
+        int length  = this.request.getLength(); //temporarily stores length of request data
+        byte data[] = this.request.getData(); //copies data from request
+        this.ip = this.request.getAddress(); //stores ip address in instance variable
+        this.port = this.request.getPort(); //stores port number in instance variable
+        //File here;
+        try {
+                socket=new DatagramSocket();
+        } catch (SocketException se) {   // Can't create the socket.
+                se.printStackTrace();
+                System.exit(1);
+        }
 
-		//Makes sure that request data starts with a 0
-		if (data[0]!=0) {
-			requestType = Request.ERROR;
-			DatagramPacket err = FormError.illegalTFTP("No starting Zero Data[0]= " + request.getData()[0]);
-			err.setAddress(request.getAddress());
-			err.setPort(request.getPort());
-			try {
+        //Makes sure that request data starts with a 0
+        if (data[0]!=0) {
+                requestType = Request.ERROR;
+                DatagramPacket err = FormError.illegalTFTP("No starting Zero Data[0]= " + request.getData()[0]);
+                err.setAddress(request.getAddress());
+                err.setPort(request.getPort());
+                try {
+                        socket.send(err);
+                } catch (IOException e) {
+                        e.printStackTrace();
+                        System.exit(1);
+                }
+
+                System.out.println(request.getData()[0]);
+                System.out.println("No starting Zero Data[0]");
+                socket.close();
+                return;
+        } else if (data[1]==1) {
+                requestType = Request.READ;//Checks if request is a read request
+        } else if (data[1]==2) {
+                requestType = Request.WRITE;//Checks if request is a write request
+        } else if(!(data[1]==1 || data[2]==2)) {
+                requestType = Request.ERROR;//If not a read or write, sets request type to invalid
+                DatagramPacket err = FormError.illegalTFTP("INVALID OPCODE. expected READ or WRITE request got " + request.getData()[1]);
+        err.setAddress(request.getAddress());
+        err.setPort(request.getPort());
+
+        try {
+        	socket.send(err);
+        } catch (IOException e) {
+        	e.printStackTrace();
+        	System.exit(1);
+        }
+        System.out.println(request.getData()[1]);
+        System.out.println("INVALID OPCODE expected READ or WRITE request got " + request.getData()[1]);
+        socket.close();
+        return;
+        } else if(data[2]<=0) {
+                requestType = Request.ERROR;
+                DatagramPacket err = FormError.illegalTFTP("Missing File name." + request.getData()[2]);
+        err.setAddress(request.getAddress());
+        err.setPort(request.getPort());
+        try {
+                        socket.send(err);
+                } catch (IOException e) {
+                        e.printStackTrace();
+                        System.exit(1);
+                }
+                System.out.println(request.getData()[2]);
+                System.out.println("Missing File name.");
+                socket.close();
+                return;
+        }
+
+        //find filename
+        int fileCount;//keeps track of position in data array while getting file name
+        //finds length of file name (number of bytes between request type and next 0 or end of array)
+        for(fileCount = 2; fileCount < length; fileCount++) {
+                if (data[fileCount] == 0) break;
+        }
+        //if there is no zero before the end of the array request is set to Invalid
+        if (fileCount==length) {
+                requestType=Request.ERROR;
+                DatagramPacket err = FormError.illegalTFTP("No zero after the file name." + request.getData());
+        err.setAddress(request.getAddress());
+        err.setPort(request.getPort());
+        try {
+                socket.send(err);
+        } catch (IOException e) {
+                e.printStackTrace();
+                System.exit(1);
+        }
+        System.out.println(request.getData());
+        System.out.println("No zero after the file name.");
+
+            socket.close();
+            return;
+        } else {
+                //here = new File(this.dir + new String(data,2,fileCount-2));//Otherwise, filename is converted into a string and stored in instance variable
+                file = this.dir + new String(data,2,fileCount-2);
+                System.out.println("File is : " + file);
+        }
+
+        //find mode
+        int modeCount;//keeps track of position in data array while getting encoding mode
+        //finds length of encoding mode (number of bytes between request type and next 0 or end of array)
+        for(modeCount = fileCount+1; modeCount < length; modeCount++) {
+                if (data[modeCount] == 0) break;
+        }
+
+        mode = new String(data,fileCount+1,modeCount-fileCount-1);//Otherwise, filename is converted into a string and stored in instance variable
+        if(!(mode.equalsIgnoreCase("octet")||mode.equalsIgnoreCase("netascii"))){
+                System.out.println("INVALID MODE");
+                requestType = Request.ERROR;
+        DatagramPacket err = FormError.illegalTFTP("INVALID MODE");
+        err.setAddress(request.getAddress());
+        err.setPort(request.getPort());
+        try {
+                socket.send(err);
+        } catch (IOException e) {
+                e.printStackTrace();
+                System.exit(1);
+        }
+        socket.close();
+        return;
+        }
+        if(data[modeCount]!=0) {
+        	DatagramPacket err = FormError.illegalTFTP("No closing zero");
+        	err.setAddress(this.ip);
+        	err.setPort(this.port);
+        	try {
 				socket.send(err);
+
+				return;
 			} catch (IOException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
-				System.exit(1);
 			}
-	
-			System.out.println(request.getData()[0]);
-			System.out.println("No starting Zero Data[0]");
-			socket.close();
-			return;
-		} else if (data[1]==1) {
-			requestType = Request.READ;//Checks if request is a read request
-		} else if (data[1]==2) {
-			requestType = Request.WRITE;//Checks if request is a write request
-		} else if(!(data[1]==1 || data[2]==2)) {
-			requestType = Request.ERROR;//If not a read or write, sets request type to invalid
-			DatagramPacket err = FormError.illegalTFTP("INVALID OPCODE. expected READ or WRITE request got " + request.getData()[1]);
-	        err.setAddress(request.getAddress());
-	        err.setPort(request.getPort());
+        }
+        //Checks that there is no data after final zero
+        if(!(modeCount==length || modeCount==length-1 || modeCount==length+1) && !(request.getData()[length-1]==0) ) {requestType=Request.ERROR;
+                requestType = Request.ERROR;
+                DatagramPacket err = FormError.illegalTFTP("there is  data after final zero." + request.getData());
+        err.setAddress(request.getAddress());
+        err.setPort(request.getPort());
+        try {
+            socket.send(err);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+        System.out.println(request.getData());
+        System.out.println("there is  data after final zero"+fileCount+" "+modeCount);
 
-	       	try {
-	       		socket.send(err);
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(1);
-			}
-	        System.out.println(request.getData()[1]);
-	        System.out.println("INVALID OPCODE expected READ or WRITE request got " + request.getData()[1]);
-	        socket.close();
-	        return;
-		} else if(data[2]<=0) {
-			requestType = Request.ERROR;
-			DatagramPacket err = FormError.illegalTFTP("Missing File name." + request.getData()[2]);
-	        err.setAddress(request.getAddress());
-	        err.setPort(request.getPort());
-	       	try {
-			 	socket.send(err);
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(1);
-			}
-			System.out.println(request.getData()[2]);
-			System.out.println("Missing File name.");
-			socket.close();
-			return;
-		}
-
-		//find filename
-		int fileCount;//keeps track of position in data array while getting file name
-		//finds length of file name (number of bytes between request type and next 0 or end of array)
-		for(fileCount = 2; fileCount < length; fileCount++) {
-			if (data[fileCount] == 0) break;
-		}
-		//if there is no zero before the end of the array request is set to Invalid
-		if (fileCount==length) {
-			requestType=Request.ERROR;
-			DatagramPacket err = FormError.illegalTFTP("No zero after the file name." + request.getData());
-	        err.setAddress(request.getAddress());
-	        err.setPort(request.getPort());
-	        try {
-	        	socket.send(err);
-	        } catch (IOException e) {
-	        	e.printStackTrace();
-	        	System.exit(1);
-	        }
-	        System.out.println(request.getData());
-	        System.out.println("No zero after the file name.");
-
-		    socket.close();
-		    return;
-		} else {
-			//here = new File(this.dir + new String(data,2,fileCount-2));//Otherwise, filename is converted into a string and stored in instance variable
-			file = this.dir + new String(data,2,fileCount-2);
-			System.out.println("File is : " + file);
-		}
-
-		//find mode
-		int modeCount;//keeps track of position in data array while getting encoding mode
-		//finds length of encoding mode (number of bytes between request type and next 0 or end of array)
-		for(modeCount = fileCount+1; modeCount < length; modeCount++) {
-			if (data[modeCount] == 0) break;
-		}
-
-		mode = new String(data,fileCount+1,modeCount-fileCount-1);//Otherwise, filename is converted into a string and stored in instance variable
-
-		if(!(mode.equalsIgnoreCase("octet")||mode.equalsIgnoreCase("netascii"))){
-		 	System.out.println("INVALID MODE");
-	        DatagramPacket err = FormError.illegalTFTP("INVALID MODE");
-	        err.setAddress(request.getAddress());
-	        err.setPort(request.getPort());
-	    	try {
-	    		socket.send(err);
-	    	} catch (IOException e) {
-	    		e.printStackTrace();
-	    		System.exit(1);
-	    	}
-	    	socket.close();
-	    	return;
-		}
-		//Checks that there is no data after final zero
-		if(!(modeCount==length || modeCount==length-1 || modeCount==length+1) && !(request.getData()[length-1]==0) ) {requestType=Request.ERROR;
-			DatagramPacket err = FormError.illegalTFTP("there is  data after final zero." + request.getData());
-	        err.setAddress(request.getAddress());
-	        err.setPort(request.getPort());
-	    	try {
-	    		socket.send(err);
-			} catch (IOException e) {
-					e.printStackTrace();
-					System.exit(1);
-			}
-	        System.out.println(request.getData());
-	        System.out.println("there is  data after final zero"+fileCount+" "+modeCount);
-
-	        socket.close();
-	        return;
-		}
+        socket.close();
+        return;
+        }
 	}
-
 
 	/**
 	 * handles a read request.  Continually loops, reading in data from selected file,
@@ -324,6 +337,16 @@ public class ServerThread implements Runnable{
 					}
 					byte block[] = new byte[2];
 					System.arraycopy(temp.getData(), 2, block, 0, 2);
+					if(!bn.lessThanOrEqualTo(block)) {
+						DatagramPacket err = FormError.illegalTFTP("Invalid block number");
+						System.out.println("Invalid block number recieved in ack");
+						System.out.println("Expected: "+bn.getCurrent()[0]+bn.getCurrent()[1]);
+						System.out.println("Recieved: "+block[0]+block[1]);
+						err.setPort(this.port);
+						err.setAddress(this.ip);
+						socket.send(err);
+						return;
+					}
 				} catch (IOException e) {
 					e.printStackTrace();
 					System.exit(1);
@@ -425,14 +448,33 @@ public class ServerThread implements Runnable{
 				System.out.println("Data received");
 				byte bn[] = new byte[2];
 				System.arraycopy(temp.getData(), 2, bn, 0, 2);
-				if (temp.getData()[0] == 0 && temp.getData()[1] == DATA && blockNumber.lessThanOrEqualTo(bn)) {
-					System.out.println("Data good");
-					System.arraycopy(temp.getData(), 4,data, 0, temp.getLength()-4);
-					return data;
+				if (!blockNumber.lessThanOrEqualTo(bn)) {
+					DatagramPacket err = FormError.illegalTFTP("Incorrect Block Number");
+					err.setAddress(this.ip);
+					err.setPort(this.port);
+					socket.send(err);
+					return null;
 				}
+				System.out.println("Data good");
+				System.arraycopy(temp.getData(), 4,data, 0, temp.getLength()-4);
+				return data;
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.exit(1);
+			}
+			if(temp.getData().length > BUFFER_SIZE) {
+				System.out.println("Too much data in block.");
+				DatagramPacket err = FormError.unknownTransferID("Too Much Data.");
+				err.setPort(temp.getPort());
+				err.setAddress(temp.getAddress());
+				
+				try {
+					socket.send(err);
+					return null;
+				} catch (IOException e) {
+		
+					e.printStackTrace();
+				}			
 			}
 		}
 		return data;	
@@ -513,6 +555,7 @@ public class ServerThread implements Runnable{
 				}
 		
 				if(length+1<MESSAGE_SIZE) {
+					System.out.println("length: "+length);
 					System.out.println("Closing file");
 					out.close();
 					sendAck(bn.getCurrent());
@@ -587,11 +630,11 @@ public class ServerThread implements Runnable{
     		System.out.println("INVALID OP CODE FROM CLIENT");
     		goodPacket= false;
     	} else if(expectedtype != packet.getData()[1] ) {             
-    		FormError.illegalTFTP("Wrong opcode got " + PACKETTYPES[(packet.getData()[1]) -1] + " expected " + PACKETTYPES[expectedtype -1]);
-    		System.out.println("EXPECTED " + PACKETTYPES[expectedtype -1] + " GOT " +PACKETTYPES[(packet.getData()[1]) -1]);
+    		err = FormError.illegalTFTP("Wrong opcode got " + (packet.getData()[1]) + " expected " + PACKETTYPES[expectedtype -1]);
+    		System.out.println("EXPECTED " + PACKETTYPES[expectedtype -1] + " GOT " +packet.getData()[1]);
     		goodPacket= false;
     	} else if((packet.getData()[1]) < 1 || (packet.getData()[1])> 5) {
-    		FormError.illegalTFTP((packet.getData()[1]) + " is an invalid Opcode");
+    		err = FormError.illegalTFTP((packet.getData()[1]) + " is an invalid Opcode");
     		System.out.println("INVALID OP CODE FROM CLIENT");
     		goodPacket= false;
     	}

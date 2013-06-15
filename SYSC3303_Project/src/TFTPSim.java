@@ -124,7 +124,7 @@ public class TFTPSim {
 				System.out.println();
 				
 				if (this.packetType == REQ) {
-					error = new Error(PACKET, this.packetType, new BlockNumber(this.blockNumber),this.errorDetail);
+					error = new Error(0, this.packetType, new BlockNumber(this.blockNumber),this.errorDetail);
 					return;
 				}
 				
@@ -197,11 +197,6 @@ public class TFTPSim {
 		System.out.println("3) Block Number Too High");
 		System.out.println("4) Block Number Too Low");
 		
-		if (this.packetType == DATA) {
-			System.out.println("5) Too Much Data");
-		} else if (this.packetType == ACK) {
-			System.out.println("5) Add Data to ACK");
-		}
 		for(;;) {
 			this.errorDetail = scanner.nextInt();
 			if (this.errorDetail>0 || this.errorDetail<=4) break;

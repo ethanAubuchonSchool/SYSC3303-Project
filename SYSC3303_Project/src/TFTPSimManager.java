@@ -80,7 +80,7 @@ public class TFTPSimManager  implements Runnable
 			temp = findError(outgoingPacket = new DatagramPacket(incomingPacket.getData(),incomingPacket.getLength(),serverIP,serverPort));
 			
 			//Prints out data contents
-			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]);
+			for(int i = 0; i < temp.length; i++) System.out.print(temp[i]+" ");
 			System.out.println();
 			
 			//Forms outgoing packet with data array from error generator
@@ -94,16 +94,14 @@ public class TFTPSimManager  implements Runnable
 			//If so, thread ends
 			if(checkForEnd(outgoingPacket.getData()))
 			{
-				System.out.println("Closing simulator thread");
-				System.out.println("Select type of error you wish to generate in the request packet:");
-				System.out.println("1) No Starting Zero");
-				System.out.println("2) Invalid Op Code");
-				System.out.println("3) No File Name");
-				System.out.println("4) No Zero After Filename");
-				System.out.println("5) No Mode");
-				System.out.println("6) Invalid Mode");
-				System.out.println("7) No Zero After Mode");
-				System.out.println("8) Data After Zero");
+				System.out.println("Which type of error do you wish to generate? (select by number):");
+				System.out.println("0) No Error");
+				System.out.println("4) Packet Error");
+				System.out.println("5) TID Error");
+				System.out.println("8) Delayed Packet");
+				System.out.println("9) Deleted Packet");
+				System.out.println("10) Duplicated Packet");
+				System.out.println("Choose: ");
 				return;
 			}
 			
@@ -114,16 +112,14 @@ public class TFTPSimManager  implements Runnable
 				//it then returns true if it was the final packet
 				if(forwardPacket()) 
 				{
-					System.out.println("Closing simulator thread");
-					System.out.println("Select type of error you wish to generate in the request packet:");
-					System.out.println("1) No Starting Zero");
-					System.out.println("2) Invalid Op Code");
-					System.out.println("3) No File Name");
-					System.out.println("4) No Zero After Filename");
-					System.out.println("5) No Mode");
-					System.out.println("6) Invalid Mode");
-					System.out.println("7) No Zero After Mode");
-					System.out.println("8) Data After Zero");
+					System.out.println("Which type of error do you wish to generate? (select by number):");
+					System.out.println("0) No Error");
+					System.out.println("4) Packet Error");
+					System.out.println("5) TID Error");
+					System.out.println("8) Delayed Packet");
+					System.out.println("9) Deleted Packet");
+					System.out.println("10) Duplicated Packet");
+					System.out.println("Choose: ");
 					return;//thread closes
 				}
 			}
@@ -303,7 +299,7 @@ public class TFTPSimManager  implements Runnable
 								else set = true;
 							}
 						}
-						temp = new byte[i+1];
+						temp = new byte[i];
 						System.arraycopy(block, 0, temp, 0, temp.length);
 						block = temp;
 						break;
@@ -353,15 +349,7 @@ public class TFTPSimManager  implements Runnable
 						bn = new BlockNumber();
 						System.arraycopy(bn.getNext(), 0, block, 2, 2);
 						break;
-						
-					case 5://no data
-						temp = new byte[BUFFER_SIZE + 3];
-						temp[BUFFER_SIZE] = 1;
-						temp[BUFFER_SIZE+1] = 1;
-						temp[BUFFER_SIZE+2] = 1;
-						block = temp;
-						break;
-						
+
 					default:
 						System.out.println("Error: invalid error details.");
 						break;
@@ -392,13 +380,6 @@ public class TFTPSimManager  implements Runnable
 						System.arraycopy(bn.getNext(), 0, block, 2, 2);
 						break;
 						
-					case 5:// data after block number
-						temp = new byte[7];
-						temp[4] = 1;
-						temp[5] = 1;
-						temp[6] = 1;
-						block = temp;
-						break;
 						
 					default:
 						System.out.println("Error: invalid error details.");
@@ -455,6 +436,7 @@ public class TFTPSimManager  implements Runnable
 		} else if (this.errorType == NETWORK) {
 			if (this.errorDetail == DELAY) {
 				//Delay the packet
+				System.out.println("Delaying data");
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {
@@ -462,6 +444,7 @@ public class TFTPSimManager  implements Runnable
 					System.exit(1);
 				}
 				this.comparitorA = new byte[4];//resets the comparitors so error wont happen again on a resent packet
+				System.out.println("Delaying data complete");
 				return packet.getData();
 			} else if (this.errorDetail == DELETE) {
 				//deletes packet
