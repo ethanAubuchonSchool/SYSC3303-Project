@@ -385,17 +385,24 @@ public class Client  {
 		
 		this.bnum = new BlockNumber();
 		this.bnum.increment();	
+		byte[] block = bnum.getCurrent();
 		this.counter = 1;
 		
 		try {
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(dir));
 			for(;;){
 				int length;
-				byte[] temp = getBlock(bnum.getCurrent());
-				if(temp == null) {
+				byte[] packet = getBlock(bnum.getCurrent());
+				
+				if(packet == null) {
 					out.close();
 					return;
 				}
+				byte[] temp = new byte[packet.length-4];
+				
+				block[0] = packet[2];
+				block[1] = packet[3];
+				System.arraycopy(packet, 4,temp, 0, packet.length-4);
 				for(length = 4; length < temp.length; length++) {
 					//System.out.print(temp[length]+","); // Used to check incoming byte array for debugging
 					if (temp[length] == 0) break;
@@ -438,7 +445,7 @@ public class Client  {
 					return;
 				}
 				System.out.println("Sending ack");
-				sendAck(bnum.getCurrent());					
+				sendAck(block);					
 				
 				System.out.println("length is: "+length);
 				
@@ -477,7 +484,6 @@ public class Client  {
 	
 	public byte[] getBlock(byte[] blockNumber) {
 		byte msg[] = new byte[516];
-		byte data[] = new byte[512];
 		System.out.println("getting data block");
 		for(;;) {
 			
@@ -563,8 +569,7 @@ public class Client  {
 				System.arraycopy(temp.getData(), 2, blockNumCheck, 0, 2);
 				if (temp.getData()[0] == 0 && temp.getData()[1] == DATA && bnum.lessThanOrEqualTo(blockNumCheck)) {
 					System.out.println("Data is good");
-					System.arraycopy(temp.getData(), 4,data, 0, temp.getLength()-4);
-					return data;
+					return temp.getData();
 				}
 				else{
 					byte[] error4 = new byte[BUFFER_SIZE];

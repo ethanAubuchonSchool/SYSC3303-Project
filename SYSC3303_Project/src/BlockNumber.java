@@ -54,6 +54,22 @@ public class BlockNumber {
 		return tester;
 	}
 	
+	public byte[] getFiveLess() {
+		for(int i = 0; i < 5; i++) {
+			if(this.numbers[1] == 0) {
+				this.numbers[1] = MAX;
+				if(this.numbers[0]==0) {
+					this.numbers[0] = MAX;
+				} else {
+					this.numbers[0]--;
+				}
+			} else {
+				this.numbers[1]--;
+			}
+		}
+		return this.numbers;
+	}
+	
 	public boolean lessThanOrEqualTo(byte n[]) {
 		if(n[1] < this.numbers[1]) return true;
 		if(n[1] == this.numbers[1] && n[0] <= this.numbers[0])return true;

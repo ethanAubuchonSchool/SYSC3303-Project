@@ -162,7 +162,7 @@ public class TFTPSimManager  implements Runnable
 		int outgoingPort;
 		InetAddress outgoingIP;
 		try {
-			//Recieves a packet
+			//Receives a packet
 			incomingPacket = new DatagramPacket(data,BUFFER_SIZE,InetAddress.getLocalHost(),clientPort);
 			socket.receive(incomingPacket);
 			//If packet is from the client port it is sent to the server

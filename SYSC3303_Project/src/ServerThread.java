@@ -267,7 +267,6 @@ public class ServerThread implements Runnable{
 					System.exit(1);			   
 				}			   
 				socket.close();			   
-				//System.out.println("File not found to read");			   
 				return;
 			}
 			BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
@@ -456,8 +455,7 @@ public class ServerThread implements Runnable{
 					return null;
 				}
 				System.out.println("Data good");
-				System.arraycopy(temp.getData(), 4,data, 0, temp.getLength()-4);
-				return data;
+				return temp.getData();
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.exit(1);
@@ -487,6 +485,7 @@ public class ServerThread implements Runnable{
 	 */
 	private void handleWrite() {
 		BlockNumber bn = new BlockNumber();
+		byte[] block = bn.getCurrent();
 		try {
 			
 			if((new File(file)).exists()){
@@ -507,11 +506,16 @@ public class ServerThread implements Runnable{
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file));
 			
 			for (;;) {
-				sendAck(bn.getCurrent());
+				sendAck(block);
 				bn.increment();
 				ackCount++;
-				byte[] temp = getBlock(bn,out);
-				if(temp == null) return;
+				byte[] packet = getBlock(bn,out);
+				if(packet == null) return;
+				byte[] temp = new byte[packet.length-4];
+				System.arraycopy(packet, 4,temp, 0, packet.length-4);
+				block[0] = packet[2];
+				block[1] = packet[3];
+				
 
 				long partition = (new File(file).getFreeSpace()) ;
 				if(partition < (long)temp.length){
@@ -627,15 +631,12 @@ public class ServerThread implements Runnable{
     	
     	if(packet.getData()[0] != 0){
     		err = FormError.illegalTFTP("First Opcode digit must be 0");
-    		System.out.println("INVALID OP CODE FROM CLIENT");
     		goodPacket= false;
     	} else if(expectedtype != packet.getData()[1] ) {             
     		err = FormError.illegalTFTP("Wrong opcode got " + (packet.getData()[1]) + " expected " + PACKETTYPES[expectedtype -1]);
-    		System.out.println("EXPECTED " + PACKETTYPES[expectedtype -1] + " GOT " +packet.getData()[1]);
     		goodPacket= false;
     	} else if((packet.getData()[1]) < 1 || (packet.getData()[1])> 5) {
     		err = FormError.illegalTFTP((packet.getData()[1]) + " is an invalid Opcode");
-    		System.out.println("INVALID OP CODE FROM CLIENT");
     		goodPacket= false;
     	}
     	
