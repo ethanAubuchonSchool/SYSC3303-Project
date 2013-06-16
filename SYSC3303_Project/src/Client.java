@@ -322,7 +322,6 @@ public class Client  {
 							DatagramPacket errorPacket = new DatagramPacket(error4, error4.length,temp.getAddress(), temp.getPort());
 							System.out.println("the error 4 has been sent");								
 							sendReceiveSocket.send(errorPacket);
-							System.out.println("the error 4 has been sent and request is starting again");
 							return;
 						}
 					
